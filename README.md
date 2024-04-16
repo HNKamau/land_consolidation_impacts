@@ -11,3 +11,7 @@ and its likely outcome(s). We also identified risks and their extent of reducing
 we write a mathematical code that takes into account the change from their current practice to id they joined the land consolidation program.
 We evaluate the worthiness of the decision by quantifying the return discounted for 25 years. We also identify variables that if addressed would
 impact the success of the decision. 
+
+Similarly, others including investors, governments and such are faced by the same dilemma - whether to or not to invest. We also looked to the 
+government to evaluate “what if the government decided to invest in land consolidation programs”.  Here, we take the same approach to assess the
+program's ability to meet the desired outcomes (food security and youth employment). 
