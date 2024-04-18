@@ -1,0 +1,143 @@
+---
+title: "farmer_model"
+author: "H. Kamau"
+date: "2024-04-15"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+
+
+
+
+```{r first things first}
+
+library(decisionSupport)
+
+```
+
+```{r make variables}
+make_variables <- function(est, n = 1)
+    {x <- random(rho = est,n = n)
+      for(i in colnames(x))
+      assign(i, as.numeric(x[1, i]),envir = .GlobalEnv)}
+
+make_variables(decisionSupport::estimate_read_csv("Input_tables/farmer_input_table.csv"))
+
+```
+
+## Function
+
+```{r function}
+farmer_decision <- function(x, varnames)
+  {
+  #chance event
+farmer_nonpopinvol_event <- chance_event(intervention_nonpopInvolv,
+                                         1, 0, n=1)
+ 
+for (decision_consolidate in c(FALSE, TRUE)) {
+  
+  if(decision_consolidate){
+    consolidate <- TRUE
+    consolidate_plan_cost <- TRUE
+  } else {
+    consolidate <- FALSE
+    consolidate_plan_cost <- TRUE
+  }
+  if (farmer_nonpopinvol_event) {
+    consolidate <- FALSE
+    consolidate_plan_cost <- TRUE
+  } 
+  
+  # Calculate farmer costs ####
+  if(consolidate) {
+    #cost of land consolidation
+    farmer_costs <- (c((value_of_farm_assets + cost_of_disruption),
+                       rep(0, n_years-1))) +
+      (vv(saved_food_cost_pm, gen_CV, n_years) * 12)
+  } else{
+    farmer_costs <- 0 
+  }
+  if(consolidate_plan_cost){
+    farmer_plan_cost <- planning_cost
+  } else {
+    farmer_plan_cost <- 0
+  }
+  # Calculate farmer benefit  ####
+  if(consolidate) {
+    #farmer gets a commensurate benefit to the size of land and 
+    #productivity 
+    
+    farmer_benefit <- (vv(passive_land_income_pm, gen_CV, n_years) * 12) +
+      (vv(off_farm_employment, gen_CV, n_years) *12)
+  }else {
+    farmer_benefit <- 0
+  }
+  # Calculate net benefit ####
+  
+  if(decision_consolidate){
+    consolidation_benefit <- farmer_benefit - farmer_costs - 
+      farmer_plan_cost
+    net_benefit <- consolidation_benefit
+    result_intervention <- net_benefit
+  }
+  if (!decision_consolidate){
+    total_cost <- farmer_costs + farmer_plan_cost
+    result_n_intervention <- total_cost
+  }
+} # end of the intervention loop
+
+  # NPV ###
+  NPV_intervention <- 
+    discount(result_intervention, discount_rate, calculate_NPV = T)
+  
+  NPV_n_intervention <- 
+    discount(result_n_intervention, discount_rate, calculate_NPV = T)
+  
+  return(list(Interv_NPV = NPV_intervention,
+              No_Interv_NPV = NPV_n_intervention,
+              NPV_decision_do = NPV_intervention - NPV_n_intervention, 
+              Cashflow_decision_do = result_intervention - result_n_intervention))
+}
+
+```
+
+
+```{r simulation}
+mcSimulation_results <- decisionSupport::mcSimulation(
+  estimate = estimate_read_csv("Input_tables/farmer_input_table.csv"),
+  model_function = farmer_decision,
+  numberOfModelRuns = 1e2, #100
+  functionSyntax = "plainNames")
+  
+```
+
+```{r pls}
+
+pls_result <- decisionSupport::plsr.mcSimulation(object = mcSimulation_results,
+                                                 resultName = names(mcSimulation_results$y)[3], 
+                                                 ncomp = 1)
+```
+
+```{r evpi}
+mcSimulation_table <- data.frame(mcSimulation_results$x, mcSimulation_results$y[1:3])
+
+evpi <- decisionSupport::multi_EVPI(mc = mcSimulation_table, 
+                                    first_out_var = "Interv_NPV")
+```
+
+```{r figures}
+decisionSupport::compound_figure(mcSimulation_object = mcSimulation_results, 
+                                 input_table = read.csv("Input_tables/farmer_input_table.csv"), 
+                                 plsrResults = pls_result, 
+                                 EVPIresults = evpi,
+                                 decision_var_name = "NPV_decision_do", 
+                                 cashflow_var_name = "Cashflow_decision_do",
+                                 base_size = 7)
+```
+Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
