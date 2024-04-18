@@ -1,0 +1,15 @@
+label,lower,median,upper,distribution,variable
+Project timeline,25,NA,25,const,n_years
+Discount rate,5,NA,12,posnorm,discount_rate
+General coefficient of variation,5,NA,15,posnorm,gen_CV
+Risk of farmer non involvement,0.05,NA,0.5,tnorm_0_1,intervention_nonpopInvolv
+Yield of maize t/ha,4,NA,8,posnorm,maize_yield
+Price of maize per kg (Kes),12,NA,200,posnorm,price_maize_per_kg
+Value of land security,10000,NA,100000,posnorm,value_of_farm_assets
+Ha per household,0.4,NA,3,posnorm,ha_per_hh
+Legal cost and knowledge acquisition,15500,NA,44000,posnorm,planning_cost
+Amount saved on food from the farm,9000,NA,30000,posnorm,saved_food_cost_pm
+Cost of assets that would be damaged,10000,NA,700000,posnorm,cost_of_disruption
+Alternative business pm,1000,NA,50000,posnorm,off_farm_employment
+Income from farm,10000,NA,250000,posnorm,passive_land_income_pm
+Number of seasons,2,NA,2,const,no_of_seasons
