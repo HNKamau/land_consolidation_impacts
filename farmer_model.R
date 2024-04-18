@@ -5,6 +5,10 @@ library(decisionSupport)
 # function start
 farmer_decision <- function(x, varnames)
   {
+  #pre-farmer benefits
+  pre_interv_benefit <- vv(maize_yield, gen_CV, n_years) * 1000* ha_per_hh * 
+    vv(price_maize_per_kg, gen_CV, n_years) + value_of_farm_assets
+  
   #chance event
 farmer_nonpopinvol_event <- chance_event(intervention_nonpopInvolv,
                                          1, 0, n=1)
@@ -52,7 +56,7 @@ for (decision_consolidate in c(FALSE, TRUE)) {
   if(decision_consolidate){
     consolidation_benefit <- farmer_benefit - farmer_costs - 
       farmer_plan_cost
-    net_benefit <- consolidation_benefit
+    net_benefit <- consolidation_benefit - pre_interv_benefit
     result_intervention <- net_benefit
   }
   if (!decision_consolidate){
