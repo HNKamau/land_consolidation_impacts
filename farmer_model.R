@@ -4,72 +4,81 @@ library(decisionSupport)
 
 # function start
 farmer_decision <- function(x, varnames)
-  {
+{
   #pre-farmer benefits
   pre_interv_benefit <- vv(maize_yield_t_ha, gen_CV, n_years) * 1000* ha_per_hh * 
     vv(price_maize_per_kg, gen_CV, n_years) + value_of_farm_assets
-
+  
   #chance event
-farmer_nonpopinvol_event <- chance_event(intervention_nonpopInvolv,
-                                         1, 0, n=1)
- 
-for (decision_consolidate in c(FALSE, TRUE)) {
+  farmer_nonpopinvol_event <- chance_event(intervention_nonpopInvolv,
+                                           1, 0, n=1)
   
-  if(decision_consolidate){
-    consolidate <- TRUE
-    consolidate_plan_cost <- TRUE
-  } else {
-    consolidate <- FALSE
-    consolidate_plan_cost <- TRUE
-  }
-  if (farmer_nonpopinvol_event) {
-    consolidate <- FALSE
-    consolidate_plan_cost <- TRUE
-  } 
+  for (decision_consolidate in c(FALSE, TRUE)) {
+    
+    if(decision_consolidate){
+      consolidate <- TRUE
+      consolidate_plan_cost <- TRUE
+    } else {
+      consolidate <- FALSE
+      consolidate_plan_cost <- TRUE
+    }
+    if (farmer_nonpopinvol_event) {
+      consolidate <- FALSE
+      consolidate_plan_cost <- TRUE
+    } 
+    
+    # Calculate farmer costs ####
+    if(consolidate) {
+      #cost of land consolidation
+      #value of farm assets includes all assets e.g., trees, boreholes etc that the
+      #farmer can longer access. 
+      #hh costs prior to the first payment that could have been realized from farm
+      farmer_costs <- (c((value_of_farm_assets + cost_of_disruption),
+                         rep(0, n_years-1))) + hhupkeep_prior_to_first_payment +
+        (vv(saved_food_cost_pm, gen_CV, n_years) * 12)
+    } else{
+      farmer_costs <- 0 
+    }
+    if(consolidate_plan_cost){
+      #planning cost involves legal fee and the cost of knowledge acquisition
+      farmer_plan_cost <- planning_cost
+    } else {
+      farmer_plan_cost <- 0
+    }
+    # Calculate farmer benefit  ####
+    if(consolidate) {
+      #farmer gets a commensurate benefit to the size of land and 
+      #productivity 
+      
+      #hospital bills saved
+      health_event <- chance_event(health_risk, 1,0, n_years)
+      #effect of the health risk on hh income
+      medical_bills_saved <- health_event * 
+        (vv(income_on_hospital/100, gen_CV,n_years)) * hh_income_pa
+      
+      farmer_benefit <- (vv(passive_land_income_pm, gen_CV, n_years) * 12) +
+        (vv(off_farm_employment, gen_CV, n_years) *12) +
+        (vv(production_costs_saved_acre, gen_CV, n_years) * 
+           (ha_per_hh*ha_acre_conversion)) + sale_of_hh_items_not_needed +
+        medical_bills_saved
+      
+    }else {
+      farmer_benefit <- 0
+    }
+    # Calculate net benefit ####
+    
+    if(decision_consolidate){
+      consolidation_benefit <- farmer_benefit - farmer_costs - 
+        farmer_plan_cost
+      net_benefit <- consolidation_benefit - pre_interv_benefit
+      result_intervention <- net_benefit
+    }
+    if (!decision_consolidate){
+      total_cost <- farmer_costs + farmer_plan_cost
+      result_n_intervention <- total_cost
+    }
+  } # end of the intervention loop
   
-  # Calculate farmer costs ####
-  if(consolidate) {
-    #cost of land consolidation
-    #value of farm assets includes all assets e.g., trees, boreholes etc that the
-    #farmer can longer access. 
-    farmer_costs <- (c((value_of_farm_assets + cost_of_disruption),
-                       rep(0, n_years-1))) + 
-                      (vv(saved_food_cost_pm, gen_CV, n_years) * 12)
-  } else{
-    farmer_costs <- 0 
-  }
-  if(consolidate_plan_cost){
-    #planning cost involves legal fee and the cost of knowledge acquisition
-    farmer_plan_cost <- planning_cost
-  } else {
-    farmer_plan_cost <- 0
-  }
-  # Calculate farmer benefit  ####
-  if(consolidate) {
-    #farmer gets a commensurate benefit to the size of land and 
-    #productivity 
-   
-  farmer_benefit <- (vv(passive_land_income_pm, gen_CV, n_years) * 12) +
-      (vv(off_farm_employment, gen_CV, n_years) *12) +
-      (vv(production_costs_saved_acre, gen_CV, n_years) * 
-         (ha_per_hh/ha_acre_conversion))
-  }else {
-    farmer_benefit <- 0
-  }
-  # Calculate net benefit ####
-  
-  if(decision_consolidate){
-    consolidation_benefit <- farmer_benefit - farmer_costs - 
-      farmer_plan_cost
-    net_benefit <- consolidation_benefit - pre_interv_benefit
-    result_intervention <- net_benefit
-  }
-  if (!decision_consolidate){
-    total_cost <- farmer_costs + farmer_plan_cost
-    result_n_intervention <- total_cost
-  }
-} # end of the intervention loop
-
   # NPV ###
   NPV_intervention <- 
     discount(result_intervention, discount_rate, calculate_NPV = T)
