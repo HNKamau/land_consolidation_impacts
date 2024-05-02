@@ -1,22 +1,29 @@
-label,lower,median,upper,distribution,variable
-Project timeline,25,NA,25,const,n_years
-Discount rate,5,NA,12,posnorm,discount_rate
-General coefficient of variation,5,NA,15,posnorm,gen_CV
-Risk of farmer non involvement,0.05,NA,0.5,tnorm_0_1,intervention_nonpopInvolv
-Yield of maize t/ha,4,NA,8,posnorm,maize_yield_t_ha
-Price of maize per kg (Kes),12,NA,200,posnorm,price_maize_per_kg
-Value of land security,10000,NA,100000,posnorm,value_of_farm_assets
-Ha per household,0,NA,5.26,posnorm,ha_per_hh
-Legal cost and knowledge acquisition,15500,NA,44000,posnorm,planning_cost
-Amount saved on food from the farm,9000,NA,30000,posnorm,saved_food_cost_pm
-Cost of assets that would be damaged,1000,NA,700000,posnorm,cost_of_disruption
-Alternative business pm,2000,NA,100000,posnorm,off_farm_employment
-Income from land compensation,10000,NA,250000,posnorm,passive_land_income_pm
-Number of seasons,2,NA,2,const,no_of_seasons
-Production costs saved,5000,NA,45000,posnorm,production_costs_saved_acre
-Ha acre conversion,2.4710499999999995,NA,2.4710499999999995,Const,ha_acre_conversion
-Cost of hh upkeep prior first payment,15000,NA,60000,posnorm,hhupkeep_prior_to_first_payment
-Hh items no longer needed,1000,NA,50000,posnorm,sale_of_hh_items_not_needed
-Risk of farm related heath crisis,0.02,NA,0.1,tnorm_0_1,health_risk
-% of hh income spent on hospital bills per month,1,NA,50,posnorm,income_on_hospital
-Hh income pa,182507,NA,390870,posnorm,hh_income_pa
+"","label","lower","median","upper","distribution","variable"
+"1","Project timeline",25,NA,25,"const","n_years"
+"2","Discount rate",5,NA,12,"posnorm","discount_rate"
+"3","General coefficient of variation",5,NA,15,"posnorm","gen_CV"
+"4","Risk of farmer non involvement",0.05,NA,0.5,"tnorm_0_1","intervention_nonpopInvolv"
+"5","Yield of maize (t/ha)",4,NA,8,"posnorm","maize_yield_t_ha"
+"6","Price of maize per kg (KES/kg)",50,NA,200,"posnorm","price_maize_per_kg"
+"7","Value of land security (KES)",10000,NA,1e+05,"posnorm","value_of_farm_assets"
+"8","HH land size (Ha)",0.01,NA,5.26,"posnorm","ha_per_hh"
+"9","Legal cost and knowledge acquisition (KES)",15500,NA,44000,"posnorm","planning_cost"
+"10","Amount saved on food from the farm (KES)",9000,NA,30000,"posnorm","saved_food_cost_pm"
+"11","Cost of assets that would be damaged (KES)",0,NA,7e+05,"norm","cost_of_disruption"
+"12","Alternative business (KES/month)",-10000,NA,1e+05,"norm","off_farm_employment"
+"13","Income from land compensation (KES)",10000,NA,250000,"unif","passive_land_income_pm"
+"14","Number of seasons",2,NA,2,"const","no_of_seasons"
+"15","Production costs saved (KES)",5000,NA,45000,"posnorm","production_costs_saved_acre"
+"16","Ha acre conversion",2.471049,NA,2.471049,"const","ha_acre_conversion"
+"17","Cost of hh upkeep prior first payment (KES)",15000,NA,60000,"posnorm","hhupkeep_prior_to_first_payment"
+"18","Hh items no longer needed (KES)",1000,NA,50000,"posnorm","sale_of_hh_items_not_needed"
+"19","Risk of farm related heath crisis",0.02,NA,0.1,"tnorm_0_1","health_risk"
+"20","Percent of hh income spent on hospital bills per month (%)",1,NA,50,"posnorm","income_on_hospital"
+"21","Hh income pa (KES/year)",182507,NA,390870,"posnorm","hh_income_pa"
+"22","Rate of 1USD to KES",132.989,NA,132.989,"const","currency_change"
+"23","Risk of vices in the community",0.05,NA,0.5,"tnorm_0_1","vice_risk"
+"24","Risk of domestic conflict",0.1,NA,0.3,"tnorm_0_1","domesticconflict_risk"
+"25","Time allocated to social activities",1,NA,12,"posnorm","social_time"
+"26","Cost of labour (KES/hr)",20,NA,75,"posnorm","labour_cost"
+"27","Weekly hours spent by the child in the farm (hours/week)",0.5,NA,8,"posnorm","child_farm_time"
+"28","No. Children per hh",1,NA,17,"posnorm","children_per_hh"
