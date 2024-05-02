@@ -69,7 +69,7 @@ farmer_decision <- function(x, varnames)
       actual_social_time <- social_time * (1-effect_social_risks)
       social_cohesion <- actual_social_time * vv(labour_cost, gen_CV, n_years)
       
-      #Better childhood benefit = longterm benefit is education
+      #Better childhood benefit = longterm benefit in education
       #quantified by child's contribution to family farm labour weekly
       #and the value of labour
       
