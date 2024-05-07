@@ -1,6 +1,11 @@
-install.packages("decisionSupport")
+# Model of the farmers' decision to join consolidation program
+
+#packages & libraries
+# install.packages("decisionSupport")
 
 library(decisionSupport)
+
+# Model testing ###
 
 make_variables <- function(est, n=1)
 {x <- random(rho=est, n=n)
@@ -8,16 +13,22 @@ for (i in colnames(x))assign(i, as.numeric(x[1,i]), envir = .GlobalEnv)}
 
 make_variables(estimate_read_csv("Input_tables/farmer_input_table.csv"))
 
-# function start
+# The model ###
+
 farmer_decision <- function(x, varnames)
 {
   #pre-farmer benefits
+  # If the farmer does not join the consolidation program, what benefits does
+  # (s)he has?  - the counter factual.
   pre_interv_benefit <- (vv(maize_yield_t_ha, gen_CV, n_years) *
-                           1000* ha_per_hh *  vv(price_maize_per_kg, 
-                                                 gen_CV, n_years) + 
-                           value_of_farm_assets)/currency_change
+                           ha_per_hh * 1000 * #conversion to kg/ha
+                           vv(price_maize_per_kg, gen_CV, n_years) + 
+                           value_of_farm_assets)/ #natural capital in the farm e,g., trees
+    currency_change
+  
   
   #chance event
+  # Farmer not joining the program
   farmer_nonpopinvol_event <- chance_event(intervention_nonpopInvolv,
                                            1, 0, n=1)
   
@@ -35,16 +46,23 @@ farmer_decision <- function(x, varnames)
       consolidate_plan_cost <- TRUE
     } 
     
-    # Calculate farmer costs ####
+    # Calculate farmer COSTS ####
     if(consolidate) {
       #cost of land consolidation
       #value of farm assets includes all assets e.g., trees, boreholes etc that the
       #farmer can longer access. 
       #hh costs prior to the first payment that could have been realized from farm
-      farmer_costs <- ((c(value_of_farm_assets + cost_of_disruption,
+      
+      #add relative trend as a way to counter inflation. 
+      # Applies to cost as far as I know. 
+      
+      
+      farmer_costs <- ((c(value_of_farm_assets + #natural capital in the farm lost
+                            cost_of_disruption, # Damages on physical assets
                           rep(0, n_years - 1))) +
-                         hhupkeep_prior_to_first_payment +
-                         (vv(saved_food_cost_pm, gen_CV, n_years) * 12)) /currency_change
+                         hhupkeep_prior_to_first_payment + #HH income needed to sustain the hh prior 1st payment
+                         (vv(saved_food_cost_pm, gen_CV, n_years) * 12)) / #Food available from farm
+        currency_change
     }else{
       farmer_costs <- 0 
     }
@@ -54,17 +72,19 @@ farmer_decision <- function(x, varnames)
     } else {
       farmer_plan_cost <- 0
     }
-    # Calculate farmer benefit  ####
+    # Calculate farmer BENEFIT  ####
     if(consolidate) {
-      #farmer's compensation
+      #farmer's compensation 
       #hospital bills saved (proxy for long term health)
       health_event <- chance_event(health_risk, 1,0, n_years)
       #effect of the health risk on hh income
-      medical_bills_saved <- health_event * vv(income_on_hospital/100, gen_CV,n_years) *
+      medical_bills_saved <- health_event * 
+        vv(income_on_hospital/100, gen_CV,n_years) * # hospital cost per year
         hh_income_pa
+      
       #social cohesion benefit as a factor of free time by the cost of labour
-      vice_event <- chance_event(vice_risk, 1,0, n_years)
-      domesticconflict_event <- chance_event(domesticconflict_risk, 1, 0, n_years)
+      vice_event <- chance_event(vice_risk, 1,0, n_years) # vices in the community e.g. crime, drug use
+      domesticconflict_event <- chance_event(domesticconflict_risk, 1, 0, n_years) 
       
       hours_on_vice <- vice_event * vv(social_time, gen_CV, n_years)
       hours_on_dconflict <- domesticconflict_event*vv(social_time, gen_CV, n_years)
@@ -75,17 +95,21 @@ farmer_decision <- function(x, varnames)
       actual_social_time <- social_time * (1-effect_social_risks)
       social_cohesion <- actual_social_time * vv(labour_cost, gen_CV, n_years)
       
-      #Better childhood benefit = longterm benefit in education
+      #Better childhood benefit = longterm benefit is education
       #quantified by child's contribution to family farm labour weekly
       #and the value of labour
       
       better_childhood <- child_farm_time * children_per_hh * vv(labour_cost, gen_CV, n_years) 
       
-      farmer_benefit <- ((vv(passive_land_income_pm, gen_CV, n_years) * 12) +
-                           (vv(off_farm_employment, gen_CV, n_years) *12) +
-                           (vv(production_costs_saved_acre, gen_CV, n_years) * 
-                              (ha_per_hh*ha_acre_conversion)) + sale_of_hh_items_not_needed +
-                           medical_bills_saved + social_cohesion + better_childhood)/currency_change
+      farmer_benefit <- ((vv(compensation_income_pm_acre, gen_CV, n_years) * 
+                            ha_per_hh * ha_acre_conversion * 12) +
+                           (vv(off_farm_employment, gen_CV, n_years) *12) + #alternative businesses 
+                           (vv(production_costs_saved_acre, gen_CV, n_years) * # production costs (inputs,planting, weeding, harvesting)
+                              (ha_per_hh* ha_acre_conversion)) + 
+                           sale_of_hh_items_not_needed + #farm tools  and other hh items no longer required
+                           medical_bills_saved + 
+                           social_cohesion + 
+                           better_childhood)/currency_change
       
     }else {
       farmer_benefit <- 0
