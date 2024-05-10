@@ -24,7 +24,7 @@ farmer_decision <- function(x, varnames)
                            ha_per_hh * 1000 * #conversion to kg/ha
                            vv(price_maize_per_kg, gen_CV, n_years) + 
                            value_of_farm_assets)/ #natural capital in the farm e,g., trees
-    currency_change
+                           currency_change
   
   
   #chance event
@@ -56,13 +56,12 @@ farmer_decision <- function(x, varnames)
       #add relative trend as a way to counter inflation. 
       # Applies to cost as far as I know. 
       
-      
       farmer_costs <- ((c(value_of_farm_assets + #natural capital in the farm lost
-                            cost_of_disruption, # Damages on physical assets
+                          cost_of_disruption, # Damages on physical assets
                           rep(0, n_years - 1))) +
-                         hhupkeep_prior_to_first_payment + #HH income needed to sustain the hh prior 1st payment
+                         hhupkeep_prior_to_first_payment + # HH income needed to sustain the hh prior 1st payment
                          (vv(saved_food_cost_pm, gen_CV, n_years) * 12)) / #Food available from farm
-        currency_change
+                          currency_change
     }else{
       farmer_costs <- 0 
     }
@@ -95,14 +94,14 @@ farmer_decision <- function(x, varnames)
       actual_social_time <- social_time * (1-effect_social_risks)
       social_cohesion <- actual_social_time * vv(labour_cost, gen_CV, n_years)
       
-      #Better childhood benefit = longterm benefit is education
+      #Better childhood benefit = long term benefit is education
       #quantified by child's contribution to family farm labour weekly
       #and the value of labour
       
       better_childhood <- child_farm_time * children_per_hh * vv(labour_cost, gen_CV, n_years) 
       
       farmer_benefit <- ((vv(compensation_income_pm_acre, gen_CV, n_years) * 
-                            ha_per_hh * ha_acre_conversion * 12) +
+                             ha_per_hh * ha_acre_conversion * 12) +
                            (vv(off_farm_employment, gen_CV, n_years) *12) + #alternative businesses 
                            (vv(production_costs_saved_acre, gen_CV, n_years) * # production costs (inputs,planting, weeding, harvesting)
                               (ha_per_hh* ha_acre_conversion)) + 
@@ -127,6 +126,7 @@ farmer_decision <- function(x, varnames)
       result_n_intervention <- total_cost
     }
   } # end of the intervention loop
+  
   
   # NPV ###
   NPV_intervention <- 
@@ -187,3 +187,4 @@ compound_figure(mcSimulation_object = mcSimulation_results,
                  decision_var_name = "NPV_decision_do", 
                  cashflow_var_name = "Cashflow_decision_do",
                  base_size = 7)
+
