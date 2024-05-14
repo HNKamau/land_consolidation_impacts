@@ -1,14 +1,11 @@
 # GOVERNMENT COSTS AND BENEFITS
-# Risks associated with government
 
 lc <- function(x, varnames)
   {
 
-political_interf_event <- chance_event(political_interference, 
-                                      1,0,n = 1)
+political_interf_event <- chance_event(political_interference,1,0,n = 1)
 inadequate_funds_event <- chance_event(inadequate_funds, 1, 0, n=1)
-farmer_nonpopinvol_event <- chance_event(intervention_nonpopInvolv,
-                                         1, 0, n=1)
+farmer_nonpopinvol_event <- chance_event(intervention_nonpopInvolv, 1, 0, n=1)
 
 # Intervention loop
 for(decision_consolidate in c(FALSE, TRUE)){
@@ -39,11 +36,13 @@ plan_cost <-
 
 #Establishment cost
 if(establishment) {
-total_ha <- ha_per_hh * total_hhs #target total land size
+total_ha <- ha_per_hh * total_hhs  #target total land size
+# only 95% of total ha is for crop production
+crop_land <- round(total_ha * 0.95)
 
-land_prep_cost <- land_prep_per_acre / ha_acre_conversion * total_ha # land survey and leveling
+land_prep_cost <- land_prep_per_acre / ha_acre_conversion * crop_land # land survey and leveling
 machinery_cost <- farm_infrastructure + farm_machinery_infrastructure # buildings,tractors, harrows, seeders, cars etc
-irrigation_cost <- (irrigation_infrastructure_per_ha * total_ha) #irrigation equipment
+irrigation_cost <- (irrigation_infrastructure_per_ha * crop_land) #irrigation equipment
 initial_cost <- land_prep_cost + machinery_cost + irrigation_cost
 
   ## Operations cost 
@@ -55,7 +54,7 @@ initial_cost <- land_prep_cost + machinery_cost + irrigation_cost
   maintenance_cost_annual [2] <-
     farm_machinery_maintence_percent/100 * farm_machinery_infrastructure +
     irrigation_maitenance_percent/100 *  irrigation_infrastructure_per_ha * 
-    total_ha
+    crop_land
   
   # Looping through years 3 to n years to calculate the maintenance
   for(i in 3:n_years){
@@ -68,7 +67,7 @@ initial_cost <- land_prep_cost + machinery_cost + irrigation_cost
                         total_hhs * 12 # annual payments to farmers
   annual_production_cost <- vv(production_cost_per_acre, gen_CV, n_years) / 
                         ha_acre_conversion * total_ha * no_of_seasons
-  all_labour_cost <- vv(all_labour, gen_CV, n_years) # skilled and unskilled labour
+  all_labour_cost <- vv(all_labour, gen_CV, n_years) # (un)skilled labour
   
   operations_costs <- annual_compensation + annual_production_cost + 
                       maintenance_cost_annual + all_labour_cost
@@ -91,8 +90,8 @@ LC_costs <- (plan_cost + initial_cost + operations_costs)/ currency_change
   effect_of_crop_risks <- sapply(c(crop_loss_drought + crop_loss_disease),
                                  function(x) min(x,1))
   
-  crop_yield_produced <- vv(maize_yield_t_ha, gen_CV, n_years) * total_ha *
-                          no_of_seasons 
+  crop_yield_produced <- vv(maize_yield_t_ha, gen_CV, n_years) * crop_land *
+                        no_of_seasons 
   actual_yield_t_ha <- crop_yield_produced * (1-effect_of_crop_risks)
   
  rainfed_revenue <- 
@@ -110,10 +109,65 @@ LC_costs <- (plan_cost + initial_cost + operations_costs)/ currency_change
   
   crop_revenue <- rainfed_revenue+ return_due_machinery + return_due_irrigation
   
+  
+# Land use planning and segregation of all the areas near water ways
+# for example rivers: which is approximately 5 % of the total land
+# planting of trees  and grass in these areas 
+  biodiversity_land <- round(5/100 * total_ha) 
+  
+  mango_yield <- gompertz_yield(max_harvest = maximum_harv,
+                                time_to_first_yield_estimate = 5,
+                                time_to_second_yield_estimate = 7,
+                                first_yield_estimate_percent = first_yield_estimate/100 ,
+                                second_yield_estimate_percent = second_yield_estimate/100,
+                                n_years = n_years,
+                                var_CV = gen_CV, 
+                                no_yield_before_first_estimate = TRUE)
+  # Applying risks to mango yield and benefits
+  mango_disease_event <- chance_event(pest_disease_risk,
+                                      value_if = yield_loss_disease,
+                                      value_if_not = 0,
+                                      n = n_years, 
+                                      CV_if = gen_CV,
+                                      CV_if_not = 0,
+                                      one_draw = FALSE)
+  
+  mango_drought_event <- chance_event(natural_hazard, 
+                                      value_if = yield_loss_drought,
+                                      value_if_not = 0,
+                                      n = n_years,
+                                      CV_if = gen_CV, 
+                                      CV_if_not = 0, 
+                                      one_draw = FALSE)
+  effect_of_risks_mango <- sapply(mango_disease_event+mango_drought_event, function(x)
+    min(1,x))
+  actual_mango_yield <- mango_yield * (1- effect_of_risks_mango)
+  mango_returns <- actual_mango_yield * 
+                  (biodiversity_land * trees_per_ha) * #total mango trees
+                  mango_price
+  
+  
+ farming_benefit <- crop_revenue + mango_returns 
+ 
+ # benefit the amount of carbon sequestered over time on agricultural land
+ # Apply risks to carbon sequestration
+ #   1) wrong crop choice which can lead to low agrobiodiversity
+ #   2) carbon market failure
+ #   3) drought risk - less biomass to sequester carbon 
+ #   4) Impact of large scale farming on degradation ( here we calculate the 
+ #      risk on carbon loss in soil per hectare). The key drivers of 
+ #     degradation would be nutrient use and traction from machinery
+ 
+ # Risks of the carbon benefit
+ # - market failure
+ 
+ 
+  
   } else {
-  crop_revenue <- 0
+  farming_benefit <- 0
 }
   # Calculate net benefit ####
+  
   
   if(decision_consolidate){
     GOVT_consolidation_benefit <- crop_revenue - LC_costs
