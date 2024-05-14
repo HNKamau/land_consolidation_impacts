@@ -1,7 +1,7 @@
 # GOVERNMENT COSTS AND BENEFITS
 
-lc <- function(x, varnames)
-  {
+# lc <- function(x, varnames)
+#   {
 
 political_interf_event <- chance_event(political_interference,1,0,n = 1)
 inadequate_funds_event <- chance_event(inadequate_funds, 1, 0, n=1)
@@ -201,40 +201,48 @@ LC_benefit <- (crop_revenue + mango_returns + mango_carbon_benefit)/
   }
 }
   # NPV ###
-  Implementer_NPV_intervention <- 
-    discount(Implementer_result_intervention, discount_rate, calculate_NPV = T)
-  
-  Implementer_NPV_n_intervention <- 
-    discount(Implementer_result_n_intervention, discount_rate, calculate_NPV = T)
+crop_revenue_NPV <- discount(crop_revenue, discount_rate, calculate_NPV = TRUE)
 
-  return(list(Implementer_Interv_NPV = Implementer_NPV_intervention,
-              Implementer_No_Interv_NPV = Implementer_NPV_n_intervention,
-              Implementer_NPV_decision_do = Implementer_NPV_intervention - Implementer_NPV_n_intervention,
-             Implementer_Cashflow_decision_do = Implementer_result_intervention -
-                                        Implementer_result_n_intervention))
+mango_returns_NPV <- discount(mango_returns, discount_rate, calculate_NPV = TRUE)
 
-  } # end of intervention loop
+carbon_benefit_NPV <- discount(mango_carbon_benefit, discount_rate, calculate_NPV = TRUE)
 
-mcSimulation_results <- decisionSupport::mcSimulation(
-  estimate = estimate_read_csv("Input_tables/farmer_input_table.csv"),
-  model_function = lc,
-  numberOfModelRuns = 1e2, #100
-  functionSyntax = "plainNames")
+Implementer_NPV_intervention <- discount(Implementer_result_intervention,
+                                         discount_rate, calculate_NPV = T)
 
-pls_result <- plsr.mcSimulation(object = mcSimulation_results,
-                                resultName = names(mcSimulation_results$y)[3], 
-                                ncomp = 1)
-
-mcSimulation_table <- data.frame(mcSimulation_results$x, 
-                                 mcSimulation_results$y[1:3])
-
-evpi <- decisionSupport::multi_EVPI(mc = mcSimulation_table, 
-                                    first_out_var = "Implementer_Interv_NPV")
-
-compound_figure(mcSimulation_object = mcSimulation_results, 
-                input_table = read.csv("Input_tables/farmer_input_table.csv"), 
-                plsrResults = pls_result, 
-                EVPIresults = evpi,
-                decision_var_name = "Implementer_NPV_decision_do", 
-                cashflow_var_name = "Implementer_Cashflow_decision_do",
-                base_size = 10)
+Implementer_NPV_n_intervention <- discount(Implementer_result_n_intervention, 
+                                           discount_rate, calculate_NPV = T)
+# 
+#   return(list(Implementer_crop_revenue_NPV  = crop_revenue_NPV,
+#               Implementer_mango_returns_NPV = mango_returns_NPV,
+#               Implementer_carbon_benefit_NPV = carbon_benefit_NPV,
+#               Implementer_Interv_NPV = Implementer_NPV_intervention,
+#               Implementer_NPV_decision_do = Implementer_NPV_intervention - Implementer_NPV_n_intervention,
+#              Implementer_Cashflow_decision_do = Implementer_result_intervention -
+#                                         Implementer_result_n_intervention))
+# 
+#   } # end of intervention loop
+# 
+# mcSimulation_results <- decisionSupport::mcSimulation(
+#   estimate = estimate_read_csv("Input_tables/farmer_input_table.csv"),
+#   model_function = lc,
+#   numberOfModelRuns = 1e2, #100
+#   functionSyntax = "plainNames")
+# 
+# pls_result <- plsr.mcSimulation(object = mcSimulation_results,
+#                                 resultName = names(mcSimulation_results$y)[3], 
+#                                 ncomp = 1)
+# 
+# mcSimulation_table <- data.frame(mcSimulation_results$x, 
+#                                  mcSimulation_results$y)
+# 
+# evpi <- decisionSupport::multi_EVPI(mc = mcSimulation_table, 
+#                                     first_out_var = "Implementer_Interv_NPV")
+# 
+# compound_figure(mcSimulation_object = mcSimulation_results, 
+#                 input_table = read.csv("Input_tables/farmer_input_table.csv"), 
+#                 plsrResults = pls_result, 
+#                 EVPIresults = evpi,
+#                 decision_var_name = "Implementer_NPV_decision_do", 
+#                 cashflow_var_name = "Implementer_Cashflow_decision_do",
+#                 base_size = 10)
