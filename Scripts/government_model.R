@@ -107,7 +107,7 @@ LC_costs <- (plan_cost + initial_cost + operations_costs)/ currency_change
                             vv(yield_irrigation_factor/100, gen_CV, n_years) *
                             vv(price_maize_per_kg, gen_CV, n_years)
   
-  crop_revenue <- rainfed_revenue+ return_due_machinery + return_due_irrigation
+  crop_revenue <- rainfed_revenue + return_due_machinery + return_due_irrigation
   
   
 # Land use planning and segregation of all the areas near water ways
@@ -144,11 +144,8 @@ LC_costs <- (plan_cost + initial_cost + operations_costs)/ currency_change
   actual_mango_yield <- mango_yield * (1- effect_of_risks_mango)
   mango_returns <- actual_mango_yield * 
                   (biodiversity_land * trees_per_ha) * #total mango trees
-                  mango_price
+                  price_mango_fruit
   
-  
- farming_benefit <- crop_revenue + mango_returns 
- 
  # benefit the amount of carbon sequestered over time on agricultural land
  # Apply risks to carbon sequestration
  #   1) wrong crop choice which can lead to low agrobiodiversity
@@ -161,35 +158,60 @@ LC_costs <- (plan_cost + initial_cost + operations_costs)/ currency_change
  # Risks of the carbon benefit
  # - market failure
  
- 
-  
+pre_carbon_benefits <- 0
+# small scale farmers do not have schemes for payment of carbon
+# calculate permanent biomass (grass and mango trees)
+
+mango_biomass_stock <- vv(biomass_mango_t_ha, gen_CV, n_years) *
+                        biodiversity_land
+
+
+# Risks related to biomass loss e.g., drought (natural hazard), diseases
+# adjust the biodiversity for that.. 
+biomass_loss_drought <- vv(mango_biomass_stock, gen_CV, n_years) * 
+                        mango_drought_event # drought
+biomass_loss_diseases <- vv(mango_biomass_stock, gen_CV, n_years) *
+                          mango_disease_event  
+adjusted_mango_biomass_stock <- mango_biomass_stock - (biomass_loss_drought + 
+                                                         biomass_loss_diseases)
+
+mango_carbon_stock <- adjusted_mango_biomass_stock * biomass_carbon_conversion_factor
+# adjust the carbon price based on the risk of carbon markets
+carbon_market_event <- chance_event(carbon_market_risk, 1,0, n_years)
+carbon_price <- vv(carbon_price, gen_CV, n_years) * carbon_market_event
+
+mango_carbon_benefit <- mango_carbon_stock * carbon_price
+
+LC_benefit <- (crop_revenue + mango_returns + mango_carbon_benefit)/
+              currency_change
+
   } else {
-  farming_benefit <- 0
+  LC_benefit <- 0
 }
   # Calculate net benefit ####
   
   
   if(decision_consolidate){
-    GOVT_consolidation_benefit <- crop_revenue - LC_costs
-    GOVT_result_intervention = GOVT_consolidation_benefit
+    Implementer_consolidation_benefit <- LC_benefit - LC_costs
+    Implementer_result_intervention = Implementer_consolidation_benefit
   }
   if (!decision_consolidate){
-    GOVT_total_cost <- LC_costs
-    GOVT_result_n_intervention = GOVT_total_cost
+    Implementer_total_cost <- LC_costs
+    Implementer_result_n_intervention = Implementer_total_cost
   }
 }
   # NPV ###
-  GOVT_NPV_intervention <- 
-    discount(GOVT_result_intervention, discount_rate, calculate_NPV = T)
+  Implementer_NPV_intervention <- 
+    discount(Implementer_result_intervention, discount_rate, calculate_NPV = T)
   
-  GOVT_NPV_n_intervention <- 
-    discount(GOVT_result_n_intervention, discount_rate, calculate_NPV = T)
+  Implementer_NPV_n_intervention <- 
+    discount(Implementer_result_n_intervention, discount_rate, calculate_NPV = T)
 
-  return(list(GOVT_Interv_NPV = GOVT_NPV_intervention,
-              GOVT_No_Interv_NPV = GOVT_NPV_n_intervention,
-              GOVT_NPV_decision_do = GOVT_NPV_intervention - GOVT_NPV_n_intervention,
-             GOVT_Cashflow_decision_do = GOVT_result_intervention -
-                                        GOVT_result_n_intervention))
+  return(list(Implementer_Interv_NPV = Implementer_NPV_intervention,
+              Implementer_No_Interv_NPV = Implementer_NPV_n_intervention,
+              Implementer_NPV_decision_do = Implementer_NPV_intervention - Implementer_NPV_n_intervention,
+             Implementer_Cashflow_decision_do = Implementer_result_intervention -
+                                        Implementer_result_n_intervention))
 
   } # end of intervention loop
 
@@ -207,12 +229,12 @@ mcSimulation_table <- data.frame(mcSimulation_results$x,
                                  mcSimulation_results$y[1:3])
 
 evpi <- decisionSupport::multi_EVPI(mc = mcSimulation_table, 
-                                    first_out_var = "GOVT_Interv_NPV")
+                                    first_out_var = "Implementer_Interv_NPV")
 
 compound_figure(mcSimulation_object = mcSimulation_results, 
                 input_table = read.csv("Input_tables/farmer_input_table.csv"), 
                 plsrResults = pls_result, 
                 EVPIresults = evpi,
-                decision_var_name = "GOVT_NPV_decision_do", 
-                cashflow_var_name = "GOVT_Cashflow_decision_do",
+                decision_var_name = "Implementer_NPV_decision_do", 
+                cashflow_var_name = "Implementer_Cashflow_decision_do",
                 base_size = 10)
