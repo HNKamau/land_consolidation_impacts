@@ -1,4 +1,6 @@
-
+library(decisionSupport)
+library(tidyverse)
+library(ggplot2)
 # assumptions - general
 #
 set.seed(123)
