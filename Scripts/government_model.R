@@ -1,10 +1,10 @@
 # GOVERNMENT COSTS AND BENEFITS
 
-# lc <- function(x, varnames)
-#   {
+lc <- function(x, varnames)
+  {
 
 political_interf_event <- chance_event(political_interference,1,0,n = 1)
-inadequate_funds_event <- chance_event(inadequate_funds, 1, 0, n=1)
+# inadequate_funds_event <- chance_event(inadequate_funds, 1, 0, n=1)
 farmer_nonpopinvol_event <- chance_event(intervention_nonpopInvolv, 1, 0, n=1)
 
 # Intervention loop
@@ -23,7 +23,7 @@ if(planning){
   more_money_due_to_politicalinterf <- 
     political_interf_event * money_needed_politicalinterf/100 
   
-actual_public_awareness <- public_awareness * (1+more_money_due_to_politicalinterf)
+actual_public_awareness <- public_awareness * (1+ more_money_due_to_politicalinterf)
   
 plan_cost <- 
             actual_public_awareness +  # communication, community meetings etc
@@ -84,8 +84,10 @@ LC_costs <- (plan_cost + initial_cost + operations_costs)/ currency_change
   natural_hazard_event <- chance_event(natural_hazard, 1,0, n_years)
   pest_disease_event <- chance_event(pest_disease_risk, 1,0, n_years)
   
-  crop_loss_drought <- natural_hazard_event * vv(yield_loss_drought/100, gen_CV, n_years)
-  crop_loss_disease <- pest_disease_event * vv(yield_loss_disease/100, gen_CV, n_years)
+  crop_loss_drought <- natural_hazard_event * vv(yield_loss_drought/100, 
+                                                 gen_CV, n_years)
+  crop_loss_disease <- pest_disease_event * vv(yield_loss_disease/100, 
+                                               gen_CV, n_years)
   
   effect_of_crop_risks <- sapply(c(crop_loss_drought + crop_loss_disease),
                                  function(x) min(x,1))
@@ -100,7 +102,8 @@ LC_costs <- (plan_cost + initial_cost + operations_costs)/ currency_change
   
   #benefit of scale operation, irrigation
   return_due_machinery <- actual_yield_t_ha *
-                            vv(machinery_technical_efficiency/100, gen_CV, n_years) *
+                            vv(machinery_technical_efficiency/100, 
+                               gen_CV, n_years) *
                             vv(price_maize_per_kg, gen_CV, n_years)
 
   return_due_irrigation <- actual_yield_t_ha *  
@@ -115,6 +118,17 @@ LC_costs <- (plan_cost + initial_cost + operations_costs)/ currency_change
 # planting of trees  and grass in these areas 
   biodiversity_land <- round(5/100 * total_ha) 
   
+  # cost of establishing and maintaining mangoes
+  mango_establishment_cost <- mango_establishment_cost_kes_acre * 
+                            ha_acre_conversion * biodiversity_land
+  mango_maintenance_cost <- vv(mango_maintenance_cost_kes_acre, gen_CV, n_years) *
+                            ha_acre_conversion * biodiversity_land
+  
+  mango_total_cost <- mango_establishment_cost + mango_maintenance_cost
+  # recommended spacing is 10m by 10m 
+# 1 ha is to 10000 m^2
+# n_mango_trees <- biodiversity_land/0.01
+
   mango_yield <- gompertz_yield(max_harvest = maximum_harv,
                                 time_to_first_yield_estimate = 5,
                                 time_to_second_yield_estimate = 7,
@@ -125,7 +139,7 @@ LC_costs <- (plan_cost + initial_cost + operations_costs)/ currency_change
                                 no_yield_before_first_estimate = TRUE)
   # Applying risks to mango yield and benefits
   mango_disease_event <- chance_event(pest_disease_risk,
-                                      value_if = yield_loss_disease,
+                                      value_if = yield_loss_disease/100,
                                       value_if_not = 0,
                                       n = n_years, 
                                       CV_if = gen_CV,
@@ -133,18 +147,45 @@ LC_costs <- (plan_cost + initial_cost + operations_costs)/ currency_change
                                       one_draw = FALSE)
   
   mango_drought_event <- chance_event(natural_hazard, 
-                                      value_if = yield_loss_drought,
+                                      value_if = yield_loss_drought/100,
                                       value_if_not = 0,
                                       n = n_years,
                                       CV_if = gen_CV, 
                                       CV_if_not = 0, 
                                       one_draw = FALSE)
-  effect_of_risks_mango <- sapply(mango_disease_event+mango_drought_event, function(x)
-    min(1,x))
+  effect_of_risks_mango <- sapply(mango_disease_event+mango_drought_event, 
+                                  function(x) min(1,x))
   actual_mango_yield <- mango_yield * (1- effect_of_risks_mango)
   mango_returns <- actual_mango_yield * 
                   (biodiversity_land * trees_per_ha) * #total mango trees
                   price_mango_fruit
+  
+  # The uncultivated space between mangoes is estimated to be 75% of the areas
+  # https://www.researchgate.net/publication/287277939_Farmer_to_farmer_spread_of_fodder_crops-an_analysis_on_mango_orchards_in_south_India
+  # To calculate the hay intercrop 
+  grass_areas <- biodiversity_land * proportion_of_uncultivated_land
+  # costs: Establishment and maintenance
+  # https://cgspace.cgiar.org/server/api/core/bitstreams/e71b06ce-8e33-4286-88f5-71214e5b5a98/content
+  grass_establishment_cost <- (grass_production_cost_ha * grass_areas) 
+  grass_maintenance_cost <- vv(grass_maintenance_kes_ha_year, gen_CV, n_years) * 
+                            grass_areas
+  grass_total_cost <- grass_establishment_cost + grass_maintenance_cost
+  
+  grass_biomass_yield_ton <- grass_areas * vv(grass_yield_t_ha_year,gen_CV, n_years)
+  # Using an example of 6 common resilient grasses in Kenya: 
+  #introduce risks like drought
+  grass_biomass_lost_drought <- chance_event(natural_hazard,
+                                             value_if = yield_loss_drought/100,
+                                             value_if_not = 0,
+                                             n = n_years, 
+                                             CV_if = gen_CV,
+                                             CV_if_not = 0,
+                                             one_draw = FALSE)
+  adjusted_grass_biomass_yield_t <- (1 - grass_biomass_lost_drought) *
+                    grass_biomass_yield_ton
+# Bales produces
+  n_bales <- (adjusted_grass_biomass_yield_t * 1000)/hay_bale_kg # change yield to kg
+  hay_returns <- n_bales * vv(price_hay_bale, gen_CV, n_years)
   
  # benefit the amount of carbon sequestered over time on agricultural land
  # Apply risks to carbon sequestration
@@ -155,34 +196,48 @@ LC_costs <- (plan_cost + initial_cost + operations_costs)/ currency_change
  #      risk on carbon loss in soil per hectare). The key drivers of 
  #     degradation would be nutrient use and traction from machinery
  
- # Risks of the carbon benefit
- # - market failure
- 
-pre_carbon_benefits <- 0
-# small scale farmers do not have schemes for payment of carbon
+
 # calculate permanent biomass (grass and mango trees)
 
-mango_biomass_stock <- vv(biomass_mango_t_ha, gen_CV, n_years) *
+mango_biomass_stock_ton <- vv(biomass_mango_t_ha, gen_CV, n_years) *
                         biodiversity_land
 
 
 # Risks related to biomass loss e.g., drought (natural hazard), diseases
 # adjust the biodiversity for that.. 
-biomass_loss_drought <- vv(mango_biomass_stock, gen_CV, n_years) * 
+biomass_loss_drought <- vv(mango_biomass_stock_ton, gen_CV, n_years) * 
                         mango_drought_event # drought
-biomass_loss_diseases <- vv(mango_biomass_stock, gen_CV, n_years) *
+biomass_loss_diseases <- vv(mango_biomass_stock_ton, gen_CV, n_years) *
                           mango_disease_event  
-adjusted_mango_biomass_stock <- mango_biomass_stock - (biomass_loss_drought + 
-                                                         biomass_loss_diseases)
+adjusted_mango_biomass_stock_ton <- mango_biomass_stock_ton - 
+                        (biomass_loss_drought +  biomass_loss_diseases)
 
-mango_carbon_stock <- adjusted_mango_biomass_stock * biomass_carbon_conversion_factor
+# Biomass from grass. 
+# with 75 % defoliation rate - at least 25% standing aboveground matter 
+abg_grass <- adjusted_grass_biomass_yield_t * 0.25
+# below ground matter of grasses
+bgb_grass_t <- vv(bgb_grass_t_ha, gen_CV, n_years) * grass_areas
+# Drought can decrease the root biomass of grassess 
+# https://doi.org/10.1016/j.scitotenv.2023.166209
+# applying risk to root biomass
+reduced_grassroot_biomass <- chance_event(natural_hazard,root_biomass_reduced/100,
+                                           0, n_years, gen_CV)
+
+adjusted_bgb_grass_t <- (1-reduced_grassroot_biomass) * bgb_grass_t
+
+total_carbon_stock <- (adjusted_bgb_grass_t + adjusted_mango_biomass_stock_ton) * 
+                      biomass_carbon_conversion_factor
 # adjust the carbon price based on the risk of carbon markets
-carbon_market_event <- chance_event(carbon_market_risk, 1,0, n_years)
-carbon_price <- vv(carbon_price, gen_CV, n_years) * carbon_market_event
+carbon_market_event <- chance_event(carbon_market_risk,
+                                    carbon_price_reduction/100, 0, n_years)
 
-mango_carbon_benefit <- mango_carbon_stock * carbon_price
+carbon_price_kes <- vv(carbon_price, gen_CV, n_years) * currency_change
+carbon_price_kes <- carbon_price_kes * (1- carbon_market_event)
 
-LC_benefit <- (crop_revenue + mango_returns + mango_carbon_benefit)/
+carbon_benefit <- total_carbon_stock * carbon_price_kes
+
+LC_benefit <- (crop_revenue + mango_returns + 
+               hay_returns + carbon_benefit)/
               currency_change
 
   } else {
@@ -192,57 +247,65 @@ LC_benefit <- (crop_revenue + mango_returns + mango_carbon_benefit)/
   
   
   if(decision_consolidate){
-    Implementer_consolidation_benefit <- LC_benefit - LC_costs
+    Implementer_consolidation_benefit <- LC_benefit - (LC_costs + 
+                                ((mango_total_cost + grass_total_cost)/
+                                   currency_change))
+                                                     
     Implementer_result_intervention = Implementer_consolidation_benefit
   }
   if (!decision_consolidate){
-    Implementer_total_cost <- LC_costs
+    Implementer_total_cost <- LC_costs + ((mango_total_cost + grass_total_cost)/
+                                            currency_change)
     Implementer_result_n_intervention = Implementer_total_cost
   }
 }
   # NPV ###
-crop_revenue_NPV <- discount(crop_revenue, discount_rate, calculate_NPV = TRUE)
+crop_NPV <- discount(crop_revenue, discount_rate, calculate_NPV = TRUE)
 
-mango_returns_NPV <- discount(mango_returns, discount_rate, calculate_NPV = TRUE)
+mango_NPV <- discount(mango_returns, discount_rate, calculate_NPV = TRUE)
 
-carbon_benefit_NPV <- discount(mango_carbon_benefit, discount_rate, calculate_NPV = TRUE)
+hay_NPV <-discount(hay_returns, discount_rate, calculate_NPV = TRUE)
+
+carbon_benefit_NPV <- discount(carbon_benefit, discount_rate, calculate_NPV = T)
 
 Implementer_NPV_intervention <- discount(Implementer_result_intervention,
                                          discount_rate, calculate_NPV = T)
 
 Implementer_NPV_n_intervention <- discount(Implementer_result_n_intervention, 
                                            discount_rate, calculate_NPV = T)
-# 
-#   return(list(Implementer_crop_revenue_NPV  = crop_revenue_NPV,
-#               Implementer_mango_returns_NPV = mango_returns_NPV,
-#               Implementer_carbon_benefit_NPV = carbon_benefit_NPV,
-#               Implementer_Interv_NPV = Implementer_NPV_intervention,
-#               Implementer_NPV_decision_do = Implementer_NPV_intervention - Implementer_NPV_n_intervention,
-#              Implementer_Cashflow_decision_do = Implementer_result_intervention -
-#                                         Implementer_result_n_intervention))
-# 
-#   } # end of intervention loop
-# 
-# mcSimulation_results <- decisionSupport::mcSimulation(
-#   estimate = estimate_read_csv("Input_tables/farmer_input_table.csv"),
-#   model_function = lc,
-#   numberOfModelRuns = 1e2, #100
-#   functionSyntax = "plainNames")
-# 
-# pls_result <- plsr.mcSimulation(object = mcSimulation_results,
-#                                 resultName = names(mcSimulation_results$y)[3], 
-#                                 ncomp = 1)
-# 
-# mcSimulation_table <- data.frame(mcSimulation_results$x, 
-#                                  mcSimulation_results$y)
-# 
-# evpi <- decisionSupport::multi_EVPI(mc = mcSimulation_table, 
-#                                     first_out_var = "Implementer_Interv_NPV")
-# 
-# compound_figure(mcSimulation_object = mcSimulation_results, 
-#                 input_table = read.csv("Input_tables/farmer_input_table.csv"), 
-#                 plsrResults = pls_result, 
-#                 EVPIresults = evpi,
-#                 decision_var_name = "Implementer_NPV_decision_do", 
-#                 cashflow_var_name = "Implementer_Cashflow_decision_do",
-#                 base_size = 10)
+
+  return(list(Implementer_crop_NPV  = crop_NPV,
+              Implementer_mango_NPV = mango_NPV,
+              Implementer_hay_NPV = hay_NPV,
+              Implementer_carbon_benefit_NPV = carbon_benefit_NPV,
+              Implementer_Interv_NPV = Implementer_NPV_intervention,
+              Implementer_NPV_decision_do = Implementer_NPV_intervention - 
+                                            Implementer_NPV_n_intervention,
+             Implementer_Cashflow_decision_do = Implementer_result_intervention -
+                                        Implementer_result_n_intervention))
+
+  } # end of intervention loop
+
+mcSimulation_results <- decisionSupport::mcSimulation(
+  estimate = estimate_read_csv("Input_tables/farmer_input_table.csv"),
+  model_function = lc,
+  numberOfModelRuns = 1e2, #100
+  functionSyntax = "plainNames")
+
+pls_result <- plsr.mcSimulation(object = mcSimulation_results,
+                                resultName = names(mcSimulation_results$y)[6],
+                                ncomp = 1)
+
+mcSimulation_table <- data.frame(mcSimulation_results$x,
+                                 mcSimulation_results$y)
+
+evpi <- decisionSupport::multi_EVPI(mc = mcSimulation_table,
+                                    first_out_var = "Implementer_crop_NPV")
+
+compound_figure(mcSimulation_object = mcSimulation_results,
+                input_table = read.csv("Input_tables/farmer_input_table.csv"),
+                plsrResults = pls_result,
+                EVPIresults = evpi,
+                decision_var_name = "Implementer_NPV_decision_do",
+                cashflow_var_name = "Implementer_Cashflow_decision_do",
+                base_size = 10)
