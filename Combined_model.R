@@ -3,6 +3,8 @@ library(tidyverse)
 library(ggplot2)
 # assumptions - general
 #
+set.seed(123)
+
 source(file = "Scripts/make_variables.R")
 
 test_decision <- function(x, varnames)
