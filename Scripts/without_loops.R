@@ -42,20 +42,27 @@ library(decisionSupport)
     crop_land
   
   # Looping through years 3 to n years to calculate the maintenance
+  # for(i in 3:n_years){
+  #   maintenance_cost_annual[i] <- 
+  #     maintenance_cost_annual[i-1] +
+  #     vv(maintenance_cost_annual[2], gen_CV, n_years)
+  # }
+  
   for(i in 3:n_years){
     maintenance_cost_annual[i] <- 
-      maintenance_cost_annual[i-1] +
-      vv(maintenance_cost_annual[2], gen_CV, n_years)
+      vv(maintenance_cost_annual[2],gen_CV, n_years
+         )
   }
   #  print(maintenance_cost_annual)
   annual_compensation <- vv(compensation_income_pm_acre, gen_CV, n_years) * 
     total_hhs * 12 # annual payments to farmers
   annual_production_cost <- vv(production_cost_per_acre, gen_CV, n_years) / 
-    ha_acre_conversion * total_ha * no_of_seasons
+    ha_acre_conversion * crop_land * no_of_seasons
   all_labour_cost <- vv(all_labour, gen_CV, n_years) # (un)skilled labour
   
   operations_costs <- annual_compensation + annual_production_cost + 
     maintenance_cost_annual + all_labour_cost
+  
   operations_costs <- operations_costs/currency_change
   
   crop_costs <- plan_cost + initial_cost + operations_costs
@@ -101,8 +108,14 @@ library(decisionSupport)
   # cost of establishing and maintaining mangoes
   mango_establishment_cost <- mango_establishment_cost_kes_acre * 
     ha_acre_conversion * biodiversity_land
-  mango_maintenance_cost <- vv(mango_maintenance_cost_kes_acre, gen_CV, n_years) *
-    ha_acre_conversion * biodiversity_land
+  mango_maintenance_cost <- rep(0, n_years)
+  mango_maintenance_cost[1] <- 0
+  mango_maintenance_cost[2:4] <- vv(mango_maintenance_cost_kes_acre, 
+                                          gen_CV, 3) * 50/100* # 50 % of total
+                                ha_acre_conversion * biodiversity_land
+  mango_maintenance_cost[5:25] <- vv(mango_maintenance_cost_kes_acre, 
+                                              gen_CV, 21)*
+                              ha_acre_conversion * biodiversity_land
   
   mango_total_cost <- (mango_establishment_cost + mango_maintenance_cost)/
                       currency_change
@@ -126,9 +139,9 @@ library(decisionSupport)
   effect_of_risks_mango <- sapply(mango_disease_event + mango_drought_event, 
                                   function(x)min(1,x))
   actual_mango_yield <- mango_yield * (1- effect_of_risks_mango)
-  mango_returns <- actual_mango_yield * 
+  mango_returns <- actual_mango_yield * # yield per tree
                     (biodiversity_land * trees_per_ha) * #total mango trees
-                     price_mango_fruit
+                     vv(price_mango_fruit,gen_CV, n_years)
   mango_returns <- mango_returns/currency_change
   
   mango_benefit <- mango_returns - mango_total_cost
@@ -206,7 +219,8 @@ library(decisionSupport)
   
   adjusted_bgb_grass_t <- (1-reduced_grassroot_biomass) * bgb_grass_t
   
-  total_carbon_stock <- (adjusted_bgb_grass_t + adjusted_mango_biomass_stock_ton) * 
+  total_carbon_stock <- (adjusted_bgb_grass_t + adjusted_mango_biomass_stock_ton +
+                           abg_grass) * 
                           biomass_carbon_conversion_factor
   
   # adjust the carbon price based on the risk of carbon markets
