@@ -1,4 +1,6 @@
-
+library(decisionSupport)
+library(tidyverse)
+library(ggplot2)
 # assumptions - general
 #
 source(file = "Scripts/make_variables.R")
@@ -8,7 +10,7 @@ test_decision <- function(x, varnames)
   source(file = "Scripts/test3.R")
   source(file = "Scripts/without_loops.R")
   return(list(farmer_Interv_NPV = NPV_intervention,
-              frmer_No_Interv_NPV = NPV_n_intervention,
+              farmer_No_Interv_NPV = NPV_n_intervention,
               farmer_NPV_decision_do = NPV_intervention - NPV_n_intervention, 
               Implementer_crop_NPV  = crop_NPV,
               Implementer_mango_NPV = mango_NPV,
@@ -28,13 +30,18 @@ mcSimulation_results <- decisionSupport::mcSimulation(
   numberOfModelRuns = 1e3, #1000
   functionSyntax = "plainNames")
 
-# decisionSupport::plot_distributions(mcSimulation_object = mcSimulation_results, 
-#                                     vars = c("Interv_NPV", "No_Interv_NPV"),
-#                                     method = 'smooth_simple_overlay', 
+# decisionSupport::plot_distributions(mcSimulation_object = mcSimulation_results,
+#                                     vars = c("farmer_Interv_NPV", "farmer_No_Interv_NPV"),
+#                                     method = 'smooth_simple_overlay',
 #                                     base_size = 8)
 # 
-# decisionSupport::plot_distributions(mcSimulation_object = mcSimulation_results, 
-#                                     vars = "NPV_decision_do",
+# decisionSupport::plot_distributions(mcSimulation_object = mcSimulation_results,
+#                                     vars = c("Implementer_Interv_NPV", "Implementer_Interv_burden_NPV"),
+#                                     method = 'smooth_simple_overlay',
+#                                     base_size = 8)
+# 
+# decisionSupport::plot_distributions(mcSimulation_object = mcSimulation_results,
+#                                     vars = "Implementer_NPV_decision_do", 
 #                                     method = 'boxplot_density')
 # 
 # decisionSupport::plot_cashflow(mcSimulation_object = mcSimulation_results, 
@@ -77,7 +84,7 @@ compound_figure(mcSimulation_object = mcSimulation_results,
 
 #### 
 Intervention_NPV <- mcSimulation_table %>% 
-  dplyr::select(Interv_NPV:Implementer_NPV_decision_do) 
+  dplyr::select(farmer_Interv_NPV:Implementer_NPV_decision_do) 
 
 # visualizing all the implementer interventions ####
 implementer_figure <- Intervention_NPV %>%
@@ -108,8 +115,8 @@ implementer_figure2 <-Intervention_NPV %>%
                names_to = "Interventions",
                values_to = "Project_outcome") %>% 
   ggplot2::ggplot(.,aes(x = Project_outcome/1e9, fill = Interventions)) +
-  geom_boxplot()+
-  #geom_density(alpha= 0.5) +
+  #geom_boxplot()+
+  geom_density(alpha= 0.5) +
   labs(x = "Project Outcome in billion USD ", y = "Density") +
   scale_fill_manual(name = "",
                     labels = c("Carbon benefit", " Hay benefit",
@@ -128,8 +135,8 @@ stakeholder_figure <-Intervention_NPV %>%
              names_to = "Stakeholder",
              values_to = "Project_Outcome") %>% 
   ggplot2::ggplot(.,aes( x = Project_Outcome/1e6, fill = Stakeholder)) +
-  geom_boxplot()+
-  #geom_density(alpha = 0.5) +
+  #geom_boxplot()+
+  geom_density(alpha = 0.5) +
   labs(x = "Project returns million USD)", y = "Density") +
   scale_fill_manual(name = "Stakeholders",
                     labels = c("Implementer", "Farmer"),
@@ -155,15 +162,14 @@ stakeholder_figure <-Intervention_NPV %>%
 print(stakeholder_figure)
 
 # looking at the farmer only  ####
-
 farmer_figure <- Intervention_NPV %>% 
-  select(farmer_Interv_NPV,farmer_No_Interv_NPV) %>% 
-  pivot_longer(., cols = c("farmer_Interv_NPV", "No_Interv_NPV"),
+  select(farmer_Interv_NPV, farmer_No_Interv_NPV) %>% 
+  pivot_longer(., cols = c("farmer_Interv_NPV", "farmer_No_Interv_NPV"),
                names_to = "Value",
                values_to = "Overall_value") %>% 
   ggplot2::ggplot(., aes(x = Overall_value/1e3, fill = Value)) +
-  #geom_boxplot()+
-  geom_density(alpha = 0.5) +
+  geom_boxplot()+
+  #geom_density(alpha = 0.5) +
   labs(x = "Outcome in thousand USD", y = "Density")+
   scale_fill_manual(name = "",
                     labels =c("Benefit with intervention", 
