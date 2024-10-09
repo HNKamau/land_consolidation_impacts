@@ -1,30 +1,25 @@
 
 ---
-title: <span style="font-size:24px;">Simulating outcomes of the effects of land consolidation to support farmer's decision for improved livelihood</span>
+title: "Simulating outcomes of the effects of land consolidation to support farmer's decision for improved livelihood"
 author: |
-  <span style="font-size:16px;">Hannah Kamau<sup>1,@</sup></span>;
-  <span style="font-size:16px;">Cory Whitney<sup>1,2</sup></span>
-date: "2024-10-09"
+  Hannah Kamau\textsuperscript{1,*},  Cory Whitney\textsuperscript{1,2}
 output: 
-  html_document:
-    toc: true
+  pdf_document:
+    toc: false
     toc_depth: 2
+    latex_engine: xelatex
 bibliography: bib/references.bib
 ---
-
-<span style="font-size:14px;"><sup>1</sup> Center for Development Research (ZEF), University of Bonn, Genscherallee 3, 53113 Bonn, Germany</span>
-<br>
-<span style="font-size:14px;"><sup>2</sup> INRES-Horticultural Sciences, University of Bonn, Auf dem Hugel 6, 53121 Bonn, Germany</span>
-<br>
-<span style="font-size:14px;"><sup>@</sup> Corresponding author's email: hannah.nyakio@gmail.com</span>
-
-
+ \textsuperscript{1} Center for Development Research (ZEF), University of Bonn, Genscherallee 3, 53113 Bonn, Germany
+\
+\textsuperscript{2} INRES-Horticultural Sciences, University of Bonn, Auf dem Hugel 6, 53121 Bonn, Germany
+\
+\textsuperscript{*} Corresponding author's email: hannah.nyakio@gmail.com
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
-
-#### Introduction
+## Introduction
 
 This document is part of the supplementary resources and contains describes the model used to simulate outcomes of the effects of land consolidation for farmers in Kenya. This model is a result of the transcription of a conceptual model that was co-created and developed with the stakeholders during data collected in March 2024. We coded and programmed the model in using `decisonSupport` package [@luedeling_decisionsupport_2022] in @r_r_2022. This document was generated using `Rmarkdown` and `knitr` libraries [@Xie_Rmarkdown_2020;@Xie_knitr_2022].
 
@@ -48,8 +43,7 @@ make_variables(decisionSupport::estimate_read_csv("Input_tables/FarmerLC_inputda
                                                   sep = ";"))
 
 ```
-
-#### Function
+## Function
 
 ```{r function}
 farmer <- function(x, varnames)
@@ -277,7 +271,5 @@ mcSimulation_results <-  decisionSupport::mcSimulation(
   
 ```
 
-
-
-#### References
+## References
 
