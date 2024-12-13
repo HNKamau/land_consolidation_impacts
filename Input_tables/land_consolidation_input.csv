@@ -1,0 +1,45 @@
+variable;lower;median;upper;distribution;label
+n_years;25;;25;const;Project timeline
+discount_rate;5;;12;posnorm;Discount rate
+gen_CV;5;;15;posnorm;General coefficient of variation
+inflation_rate;5;;8;posnorm;Inflation rate
+;;;;;
+intervention_nonpopInvolv;0.05;;0.5;tnorm_0_1;Risk of farmer non involvement
+health_risk;0.02;;0.1;tnorm_0_1;Risk of farm related heath crisis
+vice_risk;0.05;;0.5;tnorm_0_1;Risk of vices in the community
+domesticconflict_risk;0.1;;0.3;tnorm_0_1;Risk of domestic conflict
+natural_hazard;0.2;;0.5;tnorm_0_1;Risk of natural hazard
+pest_disease_risk;0.2;;0.5;tnorm_0_1;Risk of pests and diseases
+farmer_inadequate_funds_risk;0.25;;0.7;tnorm_0_1;Chance the farmer has inadequate funds for farm input (scale 0 -1)
+late_planting_risk;0.01;;0.15;tnorm_0_1;Chance the farmer plants late
+;;;;;
+;;;;;
+yield_loss_drought;10;;70;posnorm;Loss due to natural hazard (drought) event %
+yield_loss_disease;10;;30;posnorm;Loss due to crop disease event (%)
+yield_loss_due_to_input_constraint;0.19;;0.60;posnorm;Proportion of yield lost due to input constraint event 
+yield_loss_due_to_management;0.20;;0.40;posnorm;Proportion of yield lost due to management 
+;;;;;
+ha_per_hh;0.1;;5.26;posnorm;Household land size (Ha)
+ha_acre_conversion;2.471049;;2.471049;const;Ha acre conversion
+children_per_hh;1;;12;posnorm;No. Children per hh
+;;;;;
+hh_income_pa;182507;;390870;posnorm;Household income pa (KES/year)
+sale_of_hh_items_not_needed;1000;;50000;posnorm;Household items no longer needed (KES)
+value_of_farm_assets;10000;;100000;posnorm;Value of land security (KES)
+planning_cost;15500;;44000;posnorm;Farmer legal cost and knowledge acquisition (KES)
+saved_food_cost_pm;9000;;30000;posnorm;Saved  food costs from the farm (KES)
+production_costs_saved_acre;5000;;45000;posnorm;Saved production costs (KES/season)
+cost_of_disruption_kes;0;;700000;norm;Cost of assets that would be damaged (KES)
+off_farm_income_kes_pm;-10000;;100000;norm;Alternative business (KES/month)
+compensation_income_pm_acre;10000;;250000;posnorm;Lease income (KES/acre/season)
+hhupkeep_prior_to_first_payment;15000;;60000;posnorm;Cost of hh upkeep prior first payment (KES)
+prop_hhincome_spent_on_hospital;1;;50;posnorm;Household income spent on hospital bills per month (%)
+social_time_hr_day;1;;12;posnorm;Time allocated to social activities
+;;;;;
+labour_cost_kes_hr;20;;75;posnorm;Cost of farmer labour (KES/hr)
+child_farm_time_hr_week;0.5;;8;posnorm;Weekly hours spent by the child in the farm (hours/week)
+n_weeks_child_farm_time;30;;42;posnorm;Number of weeks a child works in the farm
+maize_yield_t_ha;4;;8;posnorm;Maize yield (t/ha)
+maize_price_kes_kg;50;;200;unif;Maize price (KES/kg)
+no_of_seasons;2;;2;const;Number of seasons
+currency_change;132.9890;;132.9890;const;Rate of 1 USD to Kes
