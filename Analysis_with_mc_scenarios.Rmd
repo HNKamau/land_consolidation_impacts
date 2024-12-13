@@ -1,0 +1,864 @@
+---
+title: "Evaluating land consolidation decision for smallholder farmers in Kenya"
+author: "Hannah Kamau, Cory Whitney"
+bibliography: 
+- bib/references.bib
+- bib/packages.bib
+output:
+  html_document:
+    theme: united
+    toc: true
+    toc_float: true
+    number_sections: true
+    code_folding: hide
+---
+
+# Introduction
+
+This document is a supplementary resource and contains the description of a land consolidation model used to simulate outcomes of the decision to consolidate land in Kenya by smallholder farmers. Data used in this model, was collected in March 2024 after co-creating conceptual model with the stakeholders.  
+
+
+# Install the necessary packages
+Must have R packages  are `decisionSupport`[@R-decisionSupport], `tidyverse`[@R-tidyverse], and `ggplot2` [@ggplot22016]. 
+```{r first things first, warning=FALSE, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+#install packages and load libraries
+#install.packages("decisionSupport")
+#install.packages("kableExtra")
+#install.packages("DT")
+library(decisionSupport)
+library(ggplot2)
+library(tidyverse)
+library(magrittr)
+library(kableExtra)
+library(DT)
+```
+
+```{r}
+#Packages citation tied to a .bib file
+knitr::write_bib(c(.packages(),
+                   'decisionSupport',
+                   'ggplot2',
+                   'tidyverse',
+                   'magrittr',
+                   'kableExtra',
+                   'DT'), 'bib/packages.bib')
+
+```
+
+# Transcibing conceptual model to a land consolidation function
+
+Conceptual model co-created with stakeholders reflected the costs, benefits, and risks that arise when shifting from the status quo (small farms, highly diversified) to a model where farmers consolidate their land under the management of someone else. 
+Costs of shifting included:
+
+* Increased food costs
+* Loss of natural assets e.g., trees
+* Planning costs (legal fee, knowledge acquisition)
+* Household upkeep cost prior to the first payment 
+
+Benefits of consolidating land for the farmer include:
+
+* Lease income 
+* Saved production costs
+* Alternative income from on or off farm activities
+* Better childhood
+* Social cohesion
+* Saved medical bills related to land use accidents/diseases
+
+Status quo costs included:
+
+* Planning costs (Whether the farmer decides to change or not, (s)he will have incurred the cost of planning)
+* Medical bills related to land use accidents/diseases
+* Production costs
+
+Status quo benefits included:
+
+* Land security ( calculated by the value of trees)
+* Annual crop yield
+* Saved food costs
+
+Risks facing farmers who shift include social risks as a result of freed time while risks associated with crops will face farmers who remain in the current system. 
+NB: Shifting to a land consolidation model, is for a period of 25 years. During this time frame, the farmer can longer farm on the piece of land consolidated. Below is a series of equations that define the above costs, benefits, and risks for status quo and for shifting in the function `farmer`. The calculations can help us find out what land consolidation truly renders by calculating the difference between shifting to a land consolidation model and the present state. This difference is the DECISION that can inform on viability of land consolidation. To calculate the decision, the below equation has taken a wide range of inputs, which means, uncertainty is unavoidable.  
+
+<br>
+
+```{r land_consolidation_function}
+set.seed(254)
+
+farmer <- function(x, varnames)
+  {
+
+# A) farmer benefits without intervention ####
+# We use maize equivalent of farm yield and the value of natural capital (trees) 
+# to calculate pre intervention benefits that a farmer has and will have during 
+# the project period. 
+
+# ex-ante risks to farmers crops
+natural_hazard
+pest_disease_risk
+farmer_inadequate_funds_risk
+late_planting_risk
+health_risk
+
+prop_maize_yield_lost_hazard <- chance_event(natural_hazard, 
+                  yield_loss_drought/100, 0, gen_CV, n=n_years,
+                  one_draw = FALSE)
+
+prop_maize_yield_lost_disease <- chance_event(pest_disease_risk,
+                  yield_loss_disease/100, 0, gen_CV,n=n_years, 
+                  one_draw = FALSE)
+
+prop_maize_yield_lost_input_constraint <- 
+  chance_event(farmer_inadequate_funds_risk, yield_loss_due_to_input_constraint,
+              0, gen_CV, n=n_years, one_draw = FALSE)
+
+prop_maize_yield_lost_management <- 
+       chance_event(min(late_planting_risk, health_risk),
+       yield_loss_due_to_management, 0, gen_CV, n=n_years,
+       one_draw = FALSE)
+
+#effects of all the above risks                                                                        
+farm_risks <- sapply(c(prop_maize_yield_lost_hazard + 
+         prop_maize_yield_lost_disease + prop_maize_yield_lost_input_constraint
+         + prop_maize_yield_lost_management),function(x) min(x,1))
+
+farmer_yield_t_ha <- vv(maize_yield_t_ha, gen_CV, n_years) * no_of_seasons
+
+adjusted_farmer_yield_t_ha <- farmer_yield_t_ha * (1 - farm_risks)
+
+
+crop_benefit <- 
+  adjusted_farmer_yield_t_ha * 
+  ha_per_hh * 1000 * # conversion to kg/ha
+  vv(maize_price_kes_kg, gen_CV, n_years) 
+
+# natural capital  
+adjusted_value_of_assets <-vv(value_of_farm_assets, gen_CV, n_years,relative_trend = inflation_rate)
+
+# Food cost saved from food accessible from the farm 
+annual_saved_food_cost <- vv(saved_food_cost_pm, gen_CV, n_years,relative_trend = inflation_rate) * 12 
+
+status_quo_benefit <- crop_benefit + adjusted_value_of_assets + annual_saved_food_cost
+
+# B) Cost of the farmer in the present system ####
+# medical Bills from farm related stresses
+ medical_bills <- prop_hhincome_spent_on_hospital/100 * vv(hh_income_pa, gen_CV,n_years)
+ 
+# production costs for the farm
+ farming_costs <- vv(production_costs_saved_acre, gen_CV, n_years,relative_trend = inflation_rate)*
+                   ha_per_hh * ha_acre_conversion * no_of_seasons
+ 
+ # planning cost involves legal fee and the cost of knowledge acquisition
+ farmer_plan_cost  <- planning_cost
+ 
+ status_quo_cost <- medical_bills + farming_costs + farmer_plan_cost
+                                                           
+# C) Farmer  costs  with land consolidation ####
+ farmer_one_time_cost <- cost_of_disruption_kes + # Damages on physical assets
+                         hhupkeep_prior_to_first_payment # HH income needed to sustain the hh prior 1st payment
+  
+ # planning cost involves legal fee and the cost of knowledge acquisition
+farmer_plan_cost  <- planning_cost
+  
+farmer_recurring_cost <- adjusted_value_of_assets + # loss
+                    annual_saved_food_cost # Food unavailable from farm directly
+  
+land_consolidation_cost <-  farmer_one_time_cost +  farmer_plan_cost + farmer_recurring_cost
+
+# D) Farmer Benefits with land consolidation ####
+# farmer's annual compensation aka lessor fee
+lessor_fee <-vv(compensation_income_pm_acre, gen_CV, n_years)* 2 * ha_per_hh * ha_acre_conversion
+
+#off farm employments and wages
+off_farm_income <-vv(off_farm_income_kes_pm, gen_CV, n_years) *12
+
+#income saved: production costs for farming
+production_costs_saved <- farming_costs
+# hospital bills saved (proxy for long term health) from farm related stresses
+medical_bills_saved <- medical_bills  
+
+# social cohesion benefit
+# social cohesion is expressed as a factor of free time as a result of the 
+# the intervention. With the intervention, free time is associated with 
+# social cohesion through community participation and involvement. 
+# We quantify it by the cost of labour per hour
+# First, risks that threaten social cohesion are vices e.g crime, drug use,
+# theft and domestic conflict - They take up time that would otherwise be used 
+# for community cooperation or activities
+  
+social_time_risk <- max(vice_risk,domesticconflict_risk)
+
+adjusted_social_time <- vv(social_time_hr_day, gen_CV, n_years) * (1-social_time_risk)
+social_cohesion <- adjusted_social_time * vv(labour_cost_kes_hr, gen_CV, n_years, 
+                                             relative_trend = inflation_rate)
+      
+# Better childhood benefit = long term benefit is education
+# quantified by child's contribution to family farm labour weekly
+# and the value of hired labour
+    
+better_childhood <- child_farm_time_hr_week * children_per_hh * n_weeks_child_farm_time *
+                        vv(labour_cost_kes_hr, gen_CV, n_years, relative_trend = inflation_rate ) 
+
+land_consolidation_benefit <-lessor_fee + off_farm_income + production_costs_saved + 
+                             sale_of_hh_items_not_needed + medical_bills_saved + 
+                             social_cohesion + better_childhood
+
+# E) Calculate net benefit ####
+status_quo_netbenefit <- status_quo_benefit - status_quo_cost
+status_quo_netbenefit_usd <- status_quo_netbenefit/currency_change
+    
+land_consolidation_netbenefit <- land_consolidation_benefit - land_consolidation_cost
+land_consolidation_netbenefit_usd <- land_consolidation_netbenefit/currency_change
+
+# Calculate NPV categorized costs and benefits ####
+food_cost_saved_npv <- discount(annual_saved_food_cost, discount_rate,calculate_NPV = TRUE)
+natural_assets_npv <- discount(adjusted_value_of_assets, discount_rate,calculate_NPV = T)
+lease_npv <- discount(lessor_fee, discount_rate, calculate_NPV = T)
+prdn_costs_npv <- discount(farming_costs, discount_rate, calculate_NPV = T)
+alt_income_npv <- discount(off_farm_income, discount_rate, calculate_NPV = T)
+better_childhood_npv <- discount(better_childhood, discount_rate,calculate_NPV = T)
+social_npv <- discount(social_cohesion, discount_rate, calculate_NPV = T)
+medical_npv <- discount(medical_bills_saved, discount_rate, calculate_NPV = T)
+crop_npv <- discount(crop_benefit, discount_rate, calculate_NPV = T)
+
+
+# NPV ####
+NPV_land_consolidation_netbenefit <- discount(land_consolidation_netbenefit, discount_rate, calculate_NPV = TRUE)
+NPV_land_consolidation_netbenefit_usd <- discount(land_consolidation_netbenefit_usd, discount_rate, calculate_NPV = T)
+
+
+NPV_status_quo_netbenefit <- discount(status_quo_netbenefit, discount_rate, calculate_NPV = TRUE)
+NPV_status_quo_netbenefit_usd <- discount(status_quo_netbenefit_usd, discount_rate, calculate_NPV = T)
+
+# Benefit cost ratio ####
+# without intervention
+npv_status_quo_benefit <- discount(status_quo_benefit, discount_rate, calculate_NPV = T)
+npv_status_quo_cost <- discount(status_quo_cost, discount_rate, calculate_NPV = T)
+bcr_status_quo <-npv_status_quo_benefit/npv_status_quo_cost
+
+# with intervention
+npv_land_consolidation_benefit <- discount(land_consolidation_benefit, discount_rate, calculate_NPV = T)
+npv_land_consolidation_cost <- discount(land_consolidation_cost, discount_rate, calculate_NPV = T)
+bcr_land_consolidation  <- npv_land_consolidation_benefit/npv_land_consolidation_cost
+
+
+
+   return(list(benefit_lc_usd = NPV_land_consolidation_netbenefit_usd,
+               benefit_lc_kes = NPV_land_consolidation_netbenefit, 
+               benefit_status_quo_usd = NPV_status_quo_netbenefit_usd,
+               benefit_status_quo_kes = NPV_status_quo_netbenefit,
+               net_benefit_lc_kes = NPV_land_consolidation_netbenefit - NPV_status_quo_netbenefit, 
+               net_benefit_lc_usd = NPV_land_consolidation_netbenefit_usd - NPV_status_quo_netbenefit_usd,
+               BCR_status_quo = bcr_status_quo,
+               BCR_lc = bcr_land_consolidation,
+               Food_money_saved = food_cost_saved_npv,
+               Natural_assets = natural_assets_npv,
+               Planning = farmer_plan_cost, 
+               Disruption_cost = farmer_one_time_cost,
+               Lease = lease_npv, 
+               Production_costs = prdn_costs_npv, 
+               Alternative_income = alt_income_npv, 
+               Childhood = better_childhood_npv,
+               Social = social_npv,
+               Medical = medical_npv,
+               Annual_yield = crop_npv,
+               Cashflow_decision_do = land_consolidation_netbenefit - status_quo_netbenefit))
+}
+
+```
+
+# Monte Carlo simulation
+
+Now we run a Monte Carlo simulation of the model function above using the inputs form the input table `land_consolidation_input.csv` (showing the variables used in the model function and their input given as ranges - lower and upper bound, and variables distribution). 
+
+```{r monte carlo simulation}
+
+mcSimulation_results <-  decisionSupport::mcSimulation(
+  estimate = estimate_read_csv("Input_tables/land_consolidation_input.csv", sep =";"),
+  model_function = farmer,
+  numberOfModelRuns = 1e3,
+  functionSyntax = "plainNames")
+```
+# Results of the simulation
+## Distribution of the outcomes
+```{r, warning=FALSE, message=FALSE, fig.cap= "***Figure 1. *** *Distribution of the outcomes given as Net Present Value and expressed per hectare of land. (a) the distribution of land consolidation and status quo (b) distribution of the DECISION for land consolidation. The outcomes are based on 1,000 model rums generated through Monte Carlo simulation.*"}
+
+y_output<- as.data.frame(mcSimulation_results$y)
+x_output <- as.data.frame(mcSimulation_results$x)
+mc_output <-cbind(y_output, x_output)
+mc_output <- mc_output %>% mutate(NPV_per_ha = benefit_lc_kes/ha_per_hh, 
+                      No_NPV_per_ha = benefit_status_quo_kes/ha_per_hh,
+                      NPV_per_ha_decision = net_benefit_lc_kes/ha_per_hh )
+
+fig1a <- mc_output %>% 
+  select(NPV_per_ha, No_NPV_per_ha) %>%
+  pivot_longer(., cols = c("NPV_per_ha", "No_NPV_per_ha"),
+               names_to = "variables", values_to = "project_outcome") %>%
+  group_by(variables) %>%
+  mutate(lower_bound = quantile(project_outcome, 0.05, na.rm = T),
+         upper_bound = quantile(project_outcome, 0.95, na.rm = T)) %>%
+  filter(project_outcome >= lower_bound & project_outcome <= upper_bound) %>%
+  ungroup() %>%
+  mutate(variables = factor(variables, 
+                            levels=c('NPV_per_ha', 'No_NPV_per_ha'))) %>% 
+  ggplot(aes(x = project_outcome/1e6, colour = variables, fill = variables))+
+  geom_density(alpha = 0.3)+
+  theme_bw()+
+  xlab("NPV per hectare in million KES") + ylab("Density estimate")+
+  ggtitle("a) overall outcomes") +
+  scale_colour_manual(name = "",
+                    labels = c("Land consolidation","Status quo"),
+                    values = c("#1a80bb", "deeppink"))+
+  scale_fill_manual(name = "",
+                      labels = c("Land consolidation","Status quo"),
+                      values = c("#1a80bb", "deeppink"))+
+  theme(legend.position = c(0.96, 0.95),
+        legend.justification = c("right", "top"), 
+        legend.background = element_rect(fill = "transparent"))
+
+  # Decision land consolidate
+
+percentages <- mc_output %>% 
+  select(net_benefit_lc_kes) %>% 
+  summarise(
+    negative = sum(net_benefit_lc_kes < 0, na.rm = TRUE) / n() * 100,
+    positive = sum(net_benefit_lc_kes >= 0, na.rm = TRUE) / n() * 100)
+
+negative_percent <- round(percentages$negative, 2)
+positive_percent <- round(percentages$positive, 2)
+
+custom_colors <- c("negative" = "#1a80bb", "positive" = "deeppink") #pink
+fig1b <- mc_output %>% 
+  mutate(outcome_category = ifelse(net_benefit_lc_kes >= 0, "positive","negative")) %>% 
+  select(net_benefit_lc_kes, outcome_category) %>% 
+  pivot_longer(., cols ="net_benefit_lc_kes",
+               names_to = "variables", values_to = "project_outcome") %>% 
+  group_by(variables) %>%
+  mutate(lower_bound = quantile(project_outcome, 0.05, na.rm = T),
+         upper_bound = quantile(project_outcome, 0.95, na.rm = T)) %>%
+  filter(project_outcome >= lower_bound & project_outcome <= upper_bound) %>%
+  ungroup() %>%
+  ggplot(aes(x=project_outcome/1e6, fill = outcome_category)) +
+  geom_histogram(breaks=seq(-50,50, by=2)) +
+  scale_fill_manual(values = custom_colors) +
+  guides(fill = FALSE)+
+  labs(x=" NPV in Million KES", y = "Frequency") +
+  annotate(geom = "text",label = paste0(negative_percent, " %"), x = -40, y = 40,color = "black") +
+  annotate(geom = "text", label = paste0(positive_percent, " %"), x = 40, y = 40,color = "black") +
+  theme_bw() + ggtitle("b) Decision land consolidation")
+
+
+fig1a + fig1b
+
+ggsave("figures/fig_1_MC_outcome_dist.png", width = 9, height = 5)
+
+```
+
+## Variable of Importance and EVPI
+```{r, warning=FALSE, message=FALSE, fig.cap= "***Figure 2. *** *Sensitivity and value of information analyses of decision land consolidation.a) Important variables identified by PLS regresson analysis and expressed as VIP scores to indicate model sensitivity. b) Key uncertainties identified by expected value of perfect information. The outcomes are based on 1,000 model rums generated through Monte Carlo simulation.*"}
+
+pls_result <- plsr.mcSimulation( object = mcSimulation_results,
+                                resultName = names(mcSimulation_results$y[7]), ncomp = 1)
+fig2a <- decisionSupport::plot_pls(pls_result,
+    input_table = read.csv("Input_tables/land_consolidation_input.csv", sep=";"),
+                          threshold = 1,
+    pos_color = "#1a80bb", #blue
+    neg_color = "#ea801c") + #orange  
+  scale_y_discrete(labels = function(y) str_wrap(y, width = 10)) +
+  ggtitle("a) Variable in Importance") +
+  theme(axis.text = element_text(size = 9),
+        axis.title = element_text(size = 12),
+        legend.text = element_text(size = 10)) 
+
+mcSimulation_table <- data.frame(mcSimulation_results$x,
+                                 mcSimulation_results$y[1:6])
+evpi <- decisionSupport::multi_EVPI(mc = mcSimulation_table,
+                                    first_out_var = "benefit_lc_usd")
+fig2b<- plot_evpi(evpi, decision_vars = "net_benefit_lc_kes", 
+                  input_table = read.csv("Input_tables/land_consolidation_input.csv", sep = ";"),
+                  bar_color = "#1a80bb",
+                  x_axis_name = "Expected Value of Perfect Information KES",
+                  new_names = "") +
+  scale_y_discrete(labels = function(y) str_wrap(y, width = 20)) +
+  ggtitle("b) Value of Information") +
+  theme(axis.text = element_text(size = 8),
+        axis.title = element_text(size = 10))
+
+fig2a + fig2b
+
+ggsave("figures/fig_2_MC_VIP_EVPI.png", width = 9, height = 5)
+
+```
+# Running the land consolidation monte carlo simulation with scenarios
+
+Within the `decisionSupport` is a function called `scenario_mc`,  learnt of its existence recently, that allows one to create scenarios using specific variables. A separate .csv file with specific variables to be modified is created. Here, I created a scenario file `market_scenarios.csv` based on uncertain variables. The file is as below
+
+<br>
+
+***Table 1.*** *Specific model input variables that need to be updated to generate the market scenarios. These variables are chosen based on Figure 2b analysis of value of information. These variables are the most critical variables for the decision to consolidate land.*
+
+```{r scenario_file}
+market_scenario_param <- read.csv("Input_tables/market_scenarios.csv", sep = ";")
+
+market_scenario_param %>% 
+  datatable(extensions = "Buttons",
+            options = list(dom = "Blfrtip",
+                           buttons=c('copy', 'csv', 'excel'),
+                           scrollX = TRUE,
+                            autoWidth = TRUE),
+            rownames=FALSE)
+```
+
+Trial run of the Monte Carlo simulation with scenarios 
+```{r monte_carlo_simulation_with_scenarios, warning=FALSE}
+
+land_consolidation_scenarios <-scenario_mc(base_estimate = estimate_read_csv("Input_tables/land_consolidation_input.csv", sep=";"),
+                               scenarios = read.csv("Input_tables/market_scenarios.csv", sep =";"),
+                               model_function = farmer,
+                               numberOfModelRuns = 1000,
+                               functionSyntax = "plainNames")
+
+```
+
+
+```{r, warning=FALSE, message =FALSE, include = FALSE, fig.dim = c(8,4), fig.cap="***Figure 0. *** *The decision outcome of land consolidation when the distribution of maize prices is posnorm, based on 1000 model runs of land consolidation model function.*" }
+
+
+# Here, I Use an example of a scenario... lets take scenario 1, where the only modification is the distribution type of the maize prices from uniform to posnorm.
+scenarios <- read.csv("Input_tables/market_scenarios.csv", sep =";", fileEncoding = "UTF-8")
+scen_1 <- scenarios[,c(1,2,3)]
+scen1_consolidation <- scenario_mc(base_estimate = estimate_read_csv("Input_tables/land_consolidation_input.csv", sep=";"),
+                                   scenarios = scen_1,
+                                   model_function = farmer,
+                                   numberOfModelRuns = 1000,
+                                   functionSyntax = "plainNames")
+
+ggplot(scen1_consolidation$y, aes(net_benefit_lc_kes/1000000))+
+  geom_histogram(aes(y=..density..), color="black", fill = "white")+
+  geom_density(alpha =.3, fill = "#FF8")+
+  ylab("Relative probability") +
+  xlab("Decision to consolidate land (Million KES)") + theme_bw()+
+  ggtitle("Land consolidation decision when maize price has posnorm distribution")
+
+```
+
+## Scenario 1: varying the prices of maize
+NB: when the decision is greater on the positive side, land consolidation yields more and vice versa.  
+```{r,warning =FALSE, message = FALSE, fig.cap="***Figure 3. *** *The decision outcome of land consolidation when maize price is varied, based on 1000 model runs of land consolidation model function.The red line indicated the point estimate given by the means of the distribution ranges of the prices of maize*"}
+
+scen_2 <- scenarios[,c(1,2,4)]
+scen2_consolidation <- scenario_mc(base_estimate = estimate_read_csv("Input_tables/land_consolidation_input.csv", sep=";"),
+                                   scenarios = scen_2,
+                                   model_function = farmer,
+                                   numberOfModelRuns = 1000,
+                                   functionSyntax = "plainNames")
+
+fig3a <-ggplot(scen2_consolidation$y, aes(net_benefit_lc_kes/1000000))+
+  geom_histogram(aes(y=..density..), color="black", fill = "white")+
+  geom_density(alpha =.3, fill = "#FF8")+
+  ylab("Relative probability") +
+  xlab("Decision (Mio KES)") + theme_bw()+
+  ggtitle("a) KES 5 - 86.67")
+
+
+scen_3 <- scenarios[,c(1,2,5)]
+scen3_consolidation <- scenario_mc(base_estimate = estimate_read_csv("Input_tables/land_consolidation_input.csv", sep=";"),
+                                   scenarios = scen_3,
+                                   model_function = farmer,
+                                   numberOfModelRuns = 1000,
+                                   functionSyntax = "plainNames")
+
+fig3b <-ggplot(scen3_consolidation$y, aes(net_benefit_lc_kes/1000000))+
+  geom_histogram(aes(y=..density..), color="black", fill = "white")+
+  geom_density(alpha =.3, fill = "#FF8")+
+  ylab("Relative probability") +
+  xlab("Decision (Mio KES)") + theme_bw()+
+  ggtitle("b) KES 86.68 - 168.33")
+
+
+scen_4 <- scenarios[,c(1,2,6)]
+scen4_consolidation <- scenario_mc(base_estimate = estimate_read_csv("Input_tables/land_consolidation_input.csv", sep=";"),
+                                   scenarios = scen_4,
+                                   model_function = farmer,
+                                   numberOfModelRuns = 1000,
+                                   functionSyntax = "plainNames")
+
+
+fig3c <-ggplot(scen4_consolidation$y, aes(net_benefit_lc_kes/1000000))+
+  geom_histogram(aes(y=..density..), color="black", fill = "white")+
+  geom_density(alpha =.3, fill = "#FF8")+
+  ylab("Relative probability") +
+  xlab("Decision (Mio KES)") + theme_bw()+ ggtitle("c) KES 168.34 - 250")
+
+fig3a + fig3b + fig3c
+
+#ggsave("figures/Fig_3_decision_LC_varying_mp.png", width = 9, height = 5)
+
+```
+
+## Scenario 2: varying the prices of land 
+```{r,warning = FALSE, message=FALSE, fig.cap="***Figure 4. *** *The decision outcome of land consolidation when land price is varied, based on 1000 model runs of land consolidation model function.*"}
+
+scen_5 <- scenarios[,c(1,2,7)]
+scen5_consolidation <- scenario_mc(base_estimate = estimate_read_csv("Input_tables/land_consolidation_input.csv", sep=";"),
+                                   scenarios = scen_5,
+                                   model_function = farmer,
+                                   numberOfModelRuns = 1000,
+                                   functionSyntax = "plainNames")
+
+scen5 <-ggplot(scen5_consolidation$y, aes(net_benefit_lc_kes/1000000))+
+  geom_histogram(aes(y=..density..), color="black", fill = "white")+
+  geom_density(alpha =.3, fill = "#FF8")+
+  ylab("Relative probability") +
+  xlab("Decision outcome (Mio KES)") + theme_bw()+
+  ggtitle("a) KES 10K -340k")
+
+
+scen_6 <- scenarios[,c(1,2,8)]
+scen6_consolidation <- scenario_mc(base_estimate = estimate_read_csv("Input_tables/land_consolidation_input.csv", sep=";"),
+                                   scenarios = scen_6,
+                                   model_function = farmer,
+                                   numberOfModelRuns = 1000,
+                                   functionSyntax = "plainNames")
+
+scen6 <-ggplot(scen6_consolidation$y, aes(net_benefit_lc_kes/1000000))+
+  geom_histogram(aes(y=..density..), color="black", fill = "white")+
+  geom_density(alpha =.3, fill = "#FF8")+
+  ylab("Relative probability") +
+  xlab("Decision outcome (Mio KES)") + theme_bw()+
+  ggtitle("b) KES 340K -670k")
+
+scen_7 <- scenarios[,c(1,2,9)]
+scen7_consolidation <- scenario_mc(base_estimate = estimate_read_csv("Input_tables/land_consolidation_input.csv", sep=";"),
+                                   scenarios = scen_7,
+                                   model_function = farmer,
+                                   numberOfModelRuns = 1000,
+                                   functionSyntax = "plainNames")
+
+scen7 <-ggplot(scen7_consolidation$y, aes(net_benefit_lc_kes/1000000))+
+  geom_histogram(aes(y=..density..), color="black", fill = "white")+
+  geom_density(alpha =.3, fill = "#FF8")+
+  ylab("Relative probability") +
+  xlab("Decision outcome (Mio KES)") + theme_bw()+
+  ggtitle("c) KES 670K - IM")
+
+scen5/ scen6/scen7
+
+ggsave("figures/Fig_4_decision_LC_varying_lp.png", width = 9, height = 15)
+```
+
+## Scenario 3: Combining varing prices of  maize and land 
+
+```{r, message =FALSE, warning = FALSE, fig.cap="***Figure 5. *** *The decision outcome of land consolidation when maize and land prices are varied, based on 1000 model runs of land consolidation model function.*"}
+scen_8 <- scenarios[,c(1,2,10)]
+scen8_consolidation <- scenario_mc(base_estimate = estimate_read_csv("Input_tables/land_consolidation_input.csv", sep=";"),
+                                   scenarios = scen_8,
+                                   model_function = farmer,
+                                   numberOfModelRuns = 1000,
+                                   functionSyntax = "plainNames")
+
+scen8 <-ggplot(scen8_consolidation$y, aes(net_benefit_lc_kes/1000000))+
+  geom_histogram(aes(y=..density..), color="black", fill = "white")+
+  geom_density(alpha =.3, fill = "#FF8")+
+  ylab("Relative probability") +
+  xlab("Decision outcome (Mio KES)") + theme_bw()+
+  ggtitle("a) low MP & LP")
+
+scen_9 <- scenarios[,c(1,2,11)]
+scen9_consolidation <- scenario_mc(base_estimate = estimate_read_csv("Input_tables/land_consolidation_input.csv", sep=";"),
+                                   scenarios = scen_9,
+                                   model_function = farmer,
+                                   numberOfModelRuns = 1000,
+                                   functionSyntax = "plainNames")
+
+scen9 <-ggplot(scen9_consolidation$y, aes(net_benefit_lc_kes/1000000))+
+  geom_histogram(aes(y=..density..), color="black", fill = "white")+
+  geom_density(alpha =.3, fill = "#FF8")+
+  ylab("Relative probability") +
+  xlab("Decision outcome (Mio KES)") + theme_bw()+
+  ggtitle("b) low MP & medium LP")
+
+scen_10 <- scenarios[,c(1,2,12)]
+scen10_consolidation <- scenario_mc(base_estimate = estimate_read_csv("Input_tables/land_consolidation_input.csv", sep=";"),
+                                   scenarios = scen_10,
+                                   model_function = farmer,
+                                   numberOfModelRuns = 1000,
+                                   functionSyntax = "plainNames")
+
+scen10 <-ggplot(scen10_consolidation$y, aes(net_benefit_lc_kes/1000000))+
+  geom_histogram(aes(y=..density..), color="black", fill = "white")+
+  geom_density(alpha =.3, fill = "#FF8")+
+  ylab("Relative probability") +
+  xlab("Decision outcome (Mio KES)") + theme_bw()+
+  ggtitle("c) low MP & high LP")
+
+scen_11 <- scenarios[,c(1,2,13)]
+scen11_consolidation <- scenario_mc(base_estimate = estimate_read_csv("Input_tables/land_consolidation_input.csv", sep=";"),
+                                   scenarios = scen_11,
+                                   model_function = farmer,
+                                   numberOfModelRuns = 1000,
+                                   functionSyntax = "plainNames")
+
+scen11 <-ggplot(scen11_consolidation$y, aes(net_benefit_lc_kes/1000000))+
+  geom_histogram(aes(y=..density..), color="black", fill = "white")+
+  geom_density(alpha =.3, fill = "#FF8")+
+  ylab("Relative probability") +
+  xlab("Decision outcome (Mio KES)") + theme_bw()+
+  ggtitle("d) medium MP & low LP")
+
+scen_12 <- scenarios[,c(1,2,14)]
+scen12_consolidation <- scenario_mc(base_estimate = estimate_read_csv("Input_tables/land_consolidation_input.csv", sep=";"),
+                                   scenarios = scen_12,
+                                   model_function = farmer,
+                                   numberOfModelRuns = 1000,
+                                   functionSyntax = "plainNames")
+
+scen12 <-ggplot(scen12_consolidation$y, aes(net_benefit_lc_kes/1000000))+
+  geom_histogram(aes(y=..density..), color="black", fill = "white")+
+  geom_density(alpha =.3, fill = "#FF8")+
+  ylab("Relative probability") +
+  xlab("Decision outcome (Mio KES)") + theme_bw()+
+  ggtitle("e) medium MP & LP")
+
+scen_13 <- scenarios[,c(1,2,15)]
+scen13_consolidation <- scenario_mc(base_estimate = estimate_read_csv("Input_tables/land_consolidation_input.csv", sep=";"),
+                                   scenarios = scen_13,
+                                   model_function = farmer,
+                                   numberOfModelRuns = 1000,
+                                   functionSyntax = "plainNames")
+
+scen13 <-ggplot(scen13_consolidation$y, aes(net_benefit_lc_kes/1000000))+
+  geom_histogram(aes(y=..density..), color="black", fill = "white")+
+  geom_density(alpha =.3, fill = "#FF8")+
+  ylab("Relative probability") +
+  xlab("Decision outcome (Mio KES)") + theme_bw()+
+  ggtitle("f) medium MP & high LP")
+
+scen_14 <- scenarios[,c(1,2,16)]
+scen14_consolidation <- scenario_mc(base_estimate = estimate_read_csv("Input_tables/land_consolidation_input.csv", sep=";"),
+                                   scenarios = scen_14,
+                                   model_function = farmer,
+                                   numberOfModelRuns = 1000,
+                                   functionSyntax = "plainNames")
+
+scen14 <-ggplot(scen14_consolidation$y, aes(net_benefit_lc_kes/1000000))+
+  geom_histogram(aes(y=..density..), color="black", fill = "white")+
+  geom_density(alpha =.3, fill = "#FF8")+
+  ylab("Relative probability") +
+  xlab("Decision outcome (Mio KES)") + theme_bw()+
+  ggtitle("g) high MP & low LP")
+
+scen_15 <- scenarios[,c(1,2,17)]
+scen15_consolidation <- scenario_mc(base_estimate = estimate_read_csv("Input_tables/land_consolidation_input.csv", sep=";"),
+                                   scenarios = scen_15,
+                                   model_function = farmer,
+                                   numberOfModelRuns = 1000,
+                                   functionSyntax = "plainNames")
+
+scen15 <-ggplot(scen15_consolidation$y, aes(net_benefit_lc_kes/1000000))+
+  geom_histogram(aes(y=..density..), color="black", fill = "white")+
+  geom_density(alpha =.3, fill = "#FF8")+
+  ylab("Relative probability") +
+  xlab("Decision outcome (Mio KES)") + theme_bw()+
+  ggtitle("h) high MP & medium LP")
+
+
+scen_16 <- scenarios[,c(1,2,18)]
+scen16_consolidation <- scenario_mc(base_estimate = estimate_read_csv("Input_tables/land_consolidation_input.csv", sep=";"),
+                                   scenarios = scen_16,
+                                   model_function = farmer,
+                                   numberOfModelRuns = 1000,
+                                   functionSyntax = "plainNames")
+
+scen16 <-ggplot(scen16_consolidation$y, aes(net_benefit_lc_kes/1000000))+
+  geom_histogram(aes(y=..density..), color="black", fill = "white")+
+  geom_density(alpha =.3, fill = "#FF8")+
+  ylab("Relative probability") +
+  xlab("Decision outcome (Mio KES)") + theme_bw()+
+  ggtitle("i) high MP &  LP")
+
+(scen8 + scen9 + scen10)/
+(scen11 + scen12 + scen13)/
+(scen14 +scen15 +scen16)
+
+
+ggsave("figures/Fig_5_decision_LC_varying_mp_lp.png", width = 12, height = 15)
+```
+
+# Effect change of the critical variables 
+We compare the net benefit of land consolidation of different scenarios to the baseline net benefit. Table 2 shows the summary statistics of the net benefit for land consolidation, which can also be referred to as the decision. 
+```{r, warning = FALSE, message = FALSE}
+
+land_consolidation_scenarios$y[,"net_benefit_lc_per_ha"] <- land_consolidation_scenarios$y$net_benefit_lc_kes/land_consolidation_scenarios$x$ha_per_hh #standardise to per ha
+land_consolidation_scenarios$y[,"net_benefit_lc_per_ha_MKes"] <-land_consolidation_scenarios$y$net_benefit_lc_per_ha/1000000 # in millions for simplicity
+
+low_mp <- land_consolidation_scenarios$y$net_benefit_lc_per_ha_MKes[land_consolidation_scenarios$x$Scenario == "Scen_2"]
+med_mp <- land_consolidation_scenarios$y$net_benefit_lc_per_ha_MKes[land_consolidation_scenarios$x$Scenario == "Scen_3"]
+high_mp <- land_consolidation_scenarios$y$net_benefit_lc_per_ha_MKes[land_consolidation_scenarios$x$Scenario == "Scen_4"]
+low_lp <- land_consolidation_scenarios$y$net_benefit_lc_per_ha_MKes[land_consolidation_scenarios$x$Scenario == "Scen_5"]
+med_lp <- land_consolidation_scenarios$y$net_benefit_lc_per_ha_MKes[land_consolidation_scenarios$x$Scenario == "Scen_6"]
+high_lp <- land_consolidation_scenarios$y$net_benefit_lc_per_ha_MKes[land_consolidation_scenarios$x$Scenario == "Scen_7"]
+low_mp_lp <-land_consolidation_scenarios$y$net_benefit_lc_per_ha_MKes[land_consolidation_scenarios$x$Scenario == "Scen_8"]
+low_mp_med_lp <- land_consolidation_scenarios$y$net_benefit_lc_per_ha_MKes[land_consolidation_scenarios$x$Scenario == "Scen_9"]
+low_mp_high_lp <- land_consolidation_scenarios$y$net_benefit_lc_per_ha_MKes[land_consolidation_scenarios$x$Scenario == "Scen_10"]
+med_mp_low_lp <-land_consolidation_scenarios$y$net_benefit_lc_per_ha_MKes[land_consolidation_scenarios$x$Scenario == "Scen_11"]
+med_mp_lp <- land_consolidation_scenarios$y$net_benefit_lc_per_ha_MKes[land_consolidation_scenarios$x$Scenario == "Scen_12"]
+med_mp_high_lp <- land_consolidation_scenarios$y$net_benefit_lc_per_ha_MKes[land_consolidation_scenarios$x$Scenario == "Scen_13"]
+high_mp_low_lp <- land_consolidation_scenarios$y$net_benefit_lc_per_ha_MKes[land_consolidation_scenarios$x$Scenario == "Scen_14"]
+high_mp_med_lp <- land_consolidation_scenarios$y$net_benefit_lc_per_ha_MKes[land_consolidation_scenarios$x$Scenario == "Scen_15"]
+high_mp_lp <- land_consolidation_scenarios$y$net_benefit_lc_per_ha_MKes[land_consolidation_scenarios$x$Scenario == "Scen_16"]
+
+
+scenarios_summary <- rbind(data.frame("Low maize prices"=round(quantile(low_mp, c(0,0.05,0.5,0.95,1)),2),
+                                      "Medium maize prices"=round(quantile(med_mp,c(0, 0.05,0.5,0.95,1)),2),
+                                      "High maize prices"=round(quantile(high_mp, c(0,0.05, 0.5, 0.95,1)),2),
+                                      "Low lease prices"=round(quantile(low_lp, c(0,0.05, 0.5,0.95,1)),2),
+                                      "Medium lease prices"=round(quantile(med_lp, c(0,0.05,0.5,0.95,1)),2),
+                                      "High lease prices"=round(quantile(high_lp, c(0,0.05,0.5,0.95,1)),2),
+                                      "Low maize and lease prices"=round(quantile(low_mp_lp, c(0,0.05,0.5,0.95,1)),2),
+                                      "Low MP and medium LP"=round(quantile(low_mp_med_lp, c(0,0.05,0.5,0.95,1)),2),
+                                      "Low MP and high LP"= round(quantile(low_mp_high_lp, c(0,0.05,0.5,0.95,1)),2),
+                                      "Medium MP and low LP"=round(quantile(med_mp_low_lp, c(0,0.05,0.5,0.95,1)),2),
+                                      "Medium MP and LP"=round(quantile(med_mp_lp, c(0,0.05,0.5,0.95,1)),2),
+                                      "Medium Mp and high LP"=round(quantile(med_mp_high_lp, c(0,0.05,0.5,0.95,1)),2),
+                                      "High MP and low LP"=round(quantile(high_mp_low_lp, c(0,0.05,0.5,0.95,1)),2),
+                                      "High MP and medium LP"=round(quantile(high_mp_med_lp, c(0,0.05,0.5,0.95,1)),2),
+                                      "High MP and LP"=round(quantile(high_mp_lp, c(0,0.05,0.5,0.95,1)),2)))
+
+scenarios_summary <- t(scenarios_summary) 
+scenarios_summary_df <- as.data.frame(scenarios_summary)
+quantile_labels <- c("Minimum", "5% quantile", "Median", "95% quantile", "Maximum")
+colnames(scenarios_summary_df) <- quantile_labels
+rownames(scenarios_summary_df) <- gsub("\\.", " ", rownames(scenarios_summary_df)) # Replace periods with spaces in variable names
+
+scenarios_summary_df <- cbind("Market price scenarios" = rownames(scenarios_summary_df), scenarios_summary_df, row.names=NULL)
+
+
+kable(scenarios_summary_df, format = 'html',
+  caption = "<p style='color:black'><i><b>Table 2.</b> Summary statistics of the net benefit for land consolidation of different market price scenarios. Based on 1000 model runs. Net benefit given in million KES</i></p>",
+  align = c("l", rep("c", ncol(scenarios_summary_df) - 1))) %>%
+  kable_styling(full_width = FALSE, 
+                bootstrap_options = c("striped", "hover")) %>%
+  add_header_above(c("Market Price Scenarios" = 1, "Quantiles" = ncol(scenarios_summary_df) -1), underline = TRUE) %>%
+  row_spec(nrow(scenarios_summary_df), hline_after = TRUE)
+
+```
+
+We also calculate the absolute and percent change of the net benefit for land consolidation with and without market scenarios. 
+
+```{r, message=FALSE, warning=FALSE, fig.cap="***Figure 6. *** *The effect of varying market prices for maize and lease on the net benefit for land consolidation. Based on 1000 model runs of the land consolidation model function.  a) Change in net benefit in million KES and b) change in net benefit in percent.*" }
+
+
+mcSimulation_results$y[,"net_benefit_lc_per_ha"] <- mcSimulation_results$y$net_benefit_lc_kes/mcSimulation_results$x$ha_per_hh
+mcSimulation_results$y[,"net_benefit_lc_per_ha_MKes"] <- mcSimulation_results$y$net_benefit_lc_per_ha/1000000
+baseline_lc <- mcSimulation_results$y$net_benefit_lc_per_ha_MKes
+
+netbenefit_lc <- cbind(data.frame(baseline_lc, low_mp, med_mp,high_mp, low_lp, med_lp, high_lp, low_mp_lp,low_mp_med_lp, low_mp_high_lp,
+                       med_mp_low_lp, med_mp_lp, med_mp_high_lp, high_mp_low_lp, high_mp_med_lp, high_mp_lp))
+
+netbenefit_lc[,"low_mp_change"] <- netbenefit_lc$low_mp-netbenefit_lc$baseline_lc
+netbenefit_lc[,"med_mp_change"] <- netbenefit_lc$med_mp-netbenefit_lc$baseline_lc
+netbenefit_lc[,"high_mp_change"] <-netbenefit_lc$high_mp-netbenefit_lc$baseline_lc
+netbenefit_lc[,"low_lp_change"] <-netbenefit_lc$low_lp-netbenefit_lc$baseline_lc
+netbenefit_lc[,"med_lp_change"]<-netbenefit_lc$med_lp-netbenefit_lc$baseline_lc
+netbenefit_lc[,"high_lp_change"]<-netbenefit_lc$high_lp-netbenefit_lc$baseline_lc
+netbenefit_lc[,"low_mp_lp_change"]<-netbenefit_lc$low_mp_lp-netbenefit_lc$baseline_lc
+netbenefit_lc[,"low_mp_med_lp_change"]<-netbenefit_lc$low_mp_med_lp-netbenefit_lc$baseline_lc
+netbenefit_lc[,"low_mp_high_lp_change"]<-netbenefit_lc$low_mp_high_lp-netbenefit_lc$baseline_lc
+netbenefit_lc[,"med_mp_low_lp_change"]<-netbenefit_lc$med_mp_low_lp-netbenefit_lc$baseline_lc
+netbenefit_lc[,"med_mp_lp_change"]<-netbenefit_lc$med_mp_lp-netbenefit_lc$baseline_lc
+netbenefit_lc[,"med_mp_high_lp_change"]<-netbenefit_lc$med_mp_high_lp-netbenefit_lc$baseline_lc
+netbenefit_lc[,"high_mp_low_lp_change"]<-netbenefit_lc$high_mp_low_lp-netbenefit_lc$baseline_lc
+netbenefit_lc[,"high_mp_med_lp_change"]<-netbenefit_lc$high_mp_med_lp-netbenefit_lc$baseline_lc
+netbenefit_lc[,"high_mp_lp_change"]<-netbenefit_lc$high_mp_lp-netbenefit_lc$baseline_lc
+
+
+netbenefit_lc[,"low_mp_change_relative"] <- (netbenefit_lc$low_mp-netbenefit_lc$baseline_lc)/netbenefit_lc$baseline_lc*100
+netbenefit_lc[,"med_mp_change_relative"] <- (netbenefit_lc$med_mp-netbenefit_lc$baseline_lc)/netbenefit_lc$baseline_lc*100
+netbenefit_lc[,"high_mp_change_relative"] <-(netbenefit_lc$high_mp-netbenefit_lc$baseline_lc)/netbenefit_lc$baseline_lc*100
+netbenefit_lc[,"low_lp_change_relative"] <-(netbenefit_lc$low_lp-netbenefit_lc$baseline_lc)/netbenefit_lc$baseline_lc*100
+netbenefit_lc[,"med_lp_change_relative"]<-(netbenefit_lc$med_lp-netbenefit_lc$baseline_lc)/netbenefit_lc$baseline_lc*100
+netbenefit_lc[,"high_lp_change_relative"]<-(netbenefit_lc$high_lp-netbenefit_lc$baseline_lc)/netbenefit_lc$baseline_lc*100
+netbenefit_lc[,"low_mp_lp_change_relative"]<-(netbenefit_lc$low_mp_lp-netbenefit_lc$baseline_lc)/netbenefit_lc$baseline_lc*100
+netbenefit_lc[,"low_mp_med_lp_change_relative"]<-(netbenefit_lc$low_mp_med_lp-netbenefit_lc$baseline_lc)/netbenefit_lc$baseline_lc*100
+netbenefit_lc[,"low_mp_high_lp_change_relative"]<-(netbenefit_lc$low_mp_high_lp-netbenefit_lc$baseline_lc)/netbenefit_lc$baseline_lc*100
+netbenefit_lc[,"med_mp_low_lp_change_relative"]<-(netbenefit_lc$med_mp_low_lp-netbenefit_lc$baseline_lc)/netbenefit_lc$baseline_lc*100
+netbenefit_lc[,"med_mp_lp_change_relative"]<-(netbenefit_lc$med_mp_lp-netbenefit_lc$baseline_lc)/netbenefit_lc$baseline_lc*100
+netbenefit_lc[,"med_mp_high_lp_change_relative"]<-(netbenefit_lc$med_mp_high_lp-netbenefit_lc$baseline_lc)/netbenefit_lc$baseline_lc*100
+netbenefit_lc[,"high_mp_low_lp_change_relative"]<-(netbenefit_lc$high_mp_low_lp-netbenefit_lc$baseline_lc)/netbenefit_lc$baseline_lc*100
+netbenefit_lc[,"high_mp_med_lp_change_relative"]<-(netbenefit_lc$high_mp_med_lp-netbenefit_lc$baseline_lc)/netbenefit_lc$baseline_lc*100
+netbenefit_lc[,"high_mp_lp_change_relative"]<-(netbenefit_lc$high_mp_lp-netbenefit_lc$baseline_lc)/netbenefit_lc$baseline_lc*100
+
+
+net_change<-netbenefit_lc[,grep("_change$", colnames(netbenefit_lc))] %>% 
+  pivot_longer(., cols = everything(), names_to = "market_prices", values_to = "lc_netbenefit_change") %>% 
+  mutate(lower_bound = quantile(lc_netbenefit_change, 0.05, na.rm =T),
+         upper_bound = quantile(lc_netbenefit_change, 0.95, na.rm = T)) %>% 
+  filter(lc_netbenefit_change>=lower_bound &lc_netbenefit_change<=upper_bound)
+
+change_plot <- ggplot(net_change, aes(factor(market_prices), lc_netbenefit_change))+
+                      geom_violin(draw_quantiles = c(0.5), fill="light yellow")+
+                      geom_boxplot(width = 0.2, fill= "yellow")+
+  xlab("Market price scenarios")+ylab("Change in Million KES")+
+  coord_flip()+theme_bw()+ ggtitle("a)")+
+  scale_x_discrete(labels =c("med_mp_lp_change" = "Medium MP and LP",
+                             "med_mp_low_lp_change" = "Medium MP and low LP", 
+                             "med_mp_high_lp_change" = "Medium MP and high LP", 
+                             "med_mp_change" = "Medium MP", 
+                             "med_lp_change" = "Medium LP",
+                             "low_lp_change" = "Low LP",
+                             "low_mp_med_lp_change" = "Low MP and Medium LP", 
+                             "low_mp_lp_change" = "Low MP and LP", 
+                             "low_mp_high_lp_change" = "Low MP and high LP", 
+                             "low_mp_change" = "Low MP", 
+                            "high_mp_med_lp_change" = "High MP and Medium LP",
+                            "high_mp_lp_change" = "High MP and LP", 
+                            "high_mp_low_lp_change" = "High MP and low LP", 
+                            "high_mp_change" = "High MP", 
+                            "high_lp_change" = "High LP"))
+
+      
+pc_change<-netbenefit_lc[,grep("_change_relative$", colnames(netbenefit_lc))] %>%
+  pivot_longer(., cols = everything(), names_to = "market_prices", values_to = "lc_netbenefit_pc_change") %>% 
+  mutate(lower_bound = quantile(lc_netbenefit_pc_change, 0.05, na.rm = T),
+         upper_bound = quantile(lc_netbenefit_pc_change, 0.95, na.rm = T)) %>%
+  filter(lc_netbenefit_pc_change >= lower_bound & lc_netbenefit_pc_change <= upper_bound)
+
+
+pc_plot <- ggplot(data=pc_change, aes(factor(market_prices),lc_netbenefit_pc_change))+
+  geom_violin(draw_quantiles= c(0.5),fill = "turquoise")+
+  ylab("Relative change (%)") + xlab("")+
+  theme_bw()+coord_flip()+ggtitle("b)")+ 
+  theme(axis.text.y = element_blank(),  
+    axis.title.y  = element_blank(), 
+    axis.ticks.y  = element_blank())
+  # scale_x_discrete(labels =c("med_mp_lp_change_relative" = "Medium MP and LP",
+  #                            "med_mp_low_lp_change_relative" = "Medium MP and low LP", 
+  #                            "med_mp_high_lp_change_relative" = "Medium MP and high LP", 
+  #                            "med_mp_change_relative" = "Medium MP", 
+  #                            "med_lp_change_relative" = "Medium LP",
+  #                            "low_lp_change_relative" = "Low LP",
+  #                            "low_mp_med_lp_change_relative" = "Low MP and Medium LP", 
+  #                            "low_mp_lp_change_relative" = "Low MP and LP", 
+  #                            "low_mp_high_lp_change_relative" = "Low MP and high LP", 
+  #                            "low_mp_change_relative" = "Low MP", 
+  #                           "high_mp_med_lp_change_relative" = "High MP and Medium LP",
+  #                           "high_mp_lp_change_relative" = "High MP and LP", 
+  #                           "high_mp_low_lp_change_relative" = "High MP and low LP", 
+  #                           "high_mp_change_relative" = "High MP", 
+  #                           "high_lp_change_relative" = "High LP"))
+
+
+change_plot + pc_plot
+
+ggsave("figures/fig_6_effect_change_on_decision.png", width = 9, height = 5)                
+```
+
+
+# Unclarified issues
+- should the relative change be reported?  
+
+
+## References
+
