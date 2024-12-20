@@ -6,6 +6,8 @@ bibliography:
 - bib/packages.bib
 output:
   html_document:
+    fig_width: 10
+    fig_height: 8
     theme: united
     toc: true
     toc_float: true
@@ -15,11 +17,12 @@ output:
 
 # Introduction
 
-This document is a supplementary resource and contains the description of a land consolidation model used to simulate outcomes of the decision to consolidate land in Kenya by smallholder farmers. Data used in this model, was collected in March 2024 after co-creating conceptual model with the stakeholders.  
+This document is a supplementary resource and contains the description of the land consolidation model used to simulate outcomes of the decision to consolidate land in Kenya by smallholder farmers. Data used in this model, was collected in March 2024 after co-creating a conceptual model with the stakeholders.  
 
 
 # Install the necessary packages
 Must have R packages  are `decisionSupport`[@R-decisionSupport], `tidyverse`[@R-tidyverse], and `ggplot2` [@ggplot22016]. 
+
 ```{r first things first, warning=FALSE, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 
@@ -49,17 +52,18 @@ knitr::write_bib(c(.packages(),
 
 ```
 
-# Transcibing conceptual model to a land consolidation function
+# Transcribing conceptual model to a land consolidation function
 
-Conceptual model co-created with stakeholders reflected the costs, benefits, and risks that arise when shifting from the status quo (small farms, highly diversified) to a model where farmers consolidate their land under the management of someone else. 
-Costs of shifting included:
+Conceptual model co-created with stakeholders reflected the costs, benefits, and risks that could arise when shifting from the small and highly diversified farms to a model where farmers consolidate their land under the management of someone else. Varied benefits and costs can be envisioned from the current system of small farms and from a model where farmers consolidate land. For example, 
 
-* Increased food costs
+Costs that a farmer could incur in a land consolidated option
+
+* Planning costs (legal fee, knowledge acquisition) 
 * Loss of natural assets e.g., trees
-* Planning costs (legal fee, knowledge acquisition)
+* Food costs not saved
 * Household upkeep cost prior to the first payment 
 
-Benefits of consolidating land for the farmer include:
+Benefits that a farmer could get in a land consolidated option
 
 * Lease income 
 * Saved production costs
@@ -68,20 +72,22 @@ Benefits of consolidating land for the farmer include:
 * Social cohesion
 * Saved medical bills related to land use accidents/diseases
 
-Status quo costs included:
+Costs incurred by a farmer who remains in the current system of small farms, henceforth referred to as "do nothing" option
 
 * Planning costs (Whether the farmer decides to change or not, (s)he will have incurred the cost of planning)
 * Medical bills related to land use accidents/diseases
 * Production costs
 
-Status quo benefits included:
+Benefits that accrue in the do nothing option
 
-* Land security ( calculated by the value of trees)
+* Land security (calculated by the value of trees)
 * Annual crop yield
 * Saved food costs
 
-Risks facing farmers who shift include social risks as a result of freed time while risks associated with crops will face farmers who remain in the current system. 
-NB: Shifting to a land consolidation model, is for a period of 25 years. During this time frame, the farmer can longer farm on the piece of land consolidated. Below is a series of equations that define the above costs, benefits, and risks for status quo and for shifting in the function `farmer`. The calculations can help us find out what land consolidation truly renders by calculating the difference between shifting to a land consolidation model and the present state. This difference is the DECISION that can inform on viability of land consolidation. To calculate the decision, the below equation has taken a wide range of inputs, which means, uncertainty is unavoidable.  
+The above options are also faced by risks. Risks facing farmers who shift include social risks as a result of freed time while risks associated with crops will face farmers in the do nothing option. 
+NB: Shifting to a land consolidation model, is for a period of 25 years. During this time frame, the farmer can longer farm on the piece of land consolidated, but can receive lease income commensurate to the size of the land. 
+
+Below is a series of equations that define the above costs, benefits, and risks for both options  in the function `farmer`. The calculations help us find out what land consolidation truly renders by calculating the difference between the options. This difference is the DECISION that can inform on viability of land consolidation for the farmers. To calculate the decision, the below equation takes a wide range of inputs, which means, uncertainty is unavoidable.  
 
 <br>
 
@@ -91,11 +97,8 @@ set.seed(254)
 farmer <- function(x, varnames)
   {
 
-# A) farmer benefits without intervention ####
-# We use maize equivalent of farm yield and the value of natural capital (trees) 
-# to calculate pre intervention benefits that a farmer has and will have during 
-# the project period. 
-
+# A) do nothing benefits ####
+# We use maize as the reference crop 
 # ex-ante risks to farmers crops
 natural_hazard
 pest_disease_risk
@@ -143,7 +146,7 @@ annual_saved_food_cost <- vv(saved_food_cost_pm, gen_CV, n_years,relative_trend 
 
 status_quo_benefit <- crop_benefit + adjusted_value_of_assets + annual_saved_food_cost
 
-# B) Cost of the farmer in the present system ####
+# B) do nothing costs ####
 # medical Bills from farm related stresses
  medical_bills <- prop_hhincome_spent_on_hospital/100 * vv(hh_income_pa, gen_CV,n_years)
  
@@ -169,7 +172,7 @@ farmer_recurring_cost <- adjusted_value_of_assets + # loss
 land_consolidation_cost <-  farmer_one_time_cost +  farmer_plan_cost + farmer_recurring_cost
 
 # D) Farmer Benefits with land consolidation ####
-# farmer's annual compensation aka lessor fee
+# farmer's annual compensation 
 lessor_fee <-vv(compensation_income_pm_acre, gen_CV, n_years)* 2 * ha_per_hh * ha_acre_conversion
 
 #off farm employments and wages
@@ -181,13 +184,7 @@ production_costs_saved <- farming_costs
 medical_bills_saved <- medical_bills  
 
 # social cohesion benefit
-# social cohesion is expressed as a factor of free time as a result of the 
-# the intervention. With the intervention, free time is associated with 
-# social cohesion through community participation and involvement. 
-# We quantify it by the cost of labour per hour
-# First, risks that threaten social cohesion are vices e.g crime, drug use,
-# theft and domestic conflict - They take up time that would otherwise be used 
-# for community cooperation or activities
+# social cohesion is expressed as a factor of free time as a result of the the intervention. With the intervention, free time is associated with social cohesion through community participation and involvement. We quantify it by the cost of labor per hour. First, risks that threaten social cohesion are anti-social behaviors e.g crime, drug use, theft and domestic conflict - They take up time that would otherwise be used for community cooperation or activities
   
 social_time_risk <- max(vice_risk,domesticconflict_risk)
 
@@ -195,9 +192,7 @@ adjusted_social_time <- vv(social_time_hr_day, gen_CV, n_years) * (1-social_time
 social_cohesion <- adjusted_social_time * vv(labour_cost_kes_hr, gen_CV, n_years, 
                                              relative_trend = inflation_rate)
       
-# Better childhood benefit = long term benefit is education
-# quantified by child's contribution to family farm labour weekly
-# and the value of hired labour
+# Better childhood benefit = long term benefit is education quantified by child's contribution to family farm labor weekly and the value of hired labor
     
 better_childhood <- child_farm_time_hr_week * children_per_hh * n_weeks_child_farm_time *
                         vv(labour_cost_kes_hr, gen_CV, n_years, relative_trend = inflation_rate ) 
@@ -272,7 +267,7 @@ bcr_land_consolidation  <- npv_land_consolidation_benefit/npv_land_consolidation
 
 # Monte Carlo simulation
 
-Now we run a Monte Carlo simulation of the model function above using the inputs form the input table `land_consolidation_input.csv` (showing the variables used in the model function and their input given as ranges - lower and upper bound, and variables distribution). 
+Now we run a Monte Carlo simulation of the model function above using the inputs form the input table `land_consolidation_input.csv` (shows the variables used in the model function and their input given as ranges - lower and upper bound, and the type of distribution). 
 
 ```{r monte carlo simulation}
 
@@ -282,9 +277,10 @@ mcSimulation_results <-  decisionSupport::mcSimulation(
   numberOfModelRuns = 1e3,
   functionSyntax = "plainNames")
 ```
+
 # Results of the simulation
 ## Distribution of the outcomes
-```{r, warning=FALSE, message=FALSE, fig.dim = c(8, 4), fig.cap= "***Figure 1. *** *Distribution of the outcomes given as Net Present Value and expressed per hectare of land. (a) the distribution of land consolidation and status quo (b) distribution of the DECISION for land consolidation. The outcomes are based on 1,000 model rums generated through Monte Carlo simulation.*"}
+```{r, warning=FALSE, message=FALSE, fig.dim = c(10, 10),fig.cap= "***Figure 1. *** *Distribution of the outcomes given as net present value and expressed per hectare of land. (a) the distribution of land consolidation and do nothing options (b) distribution of the DECISION for land consolidation. The outcomes are based on 1,000 model runs generated through Monte Carlo simulation.*"}
 
 y_output<- as.data.frame(mcSimulation_results$y)
 x_output <- as.data.frame(mcSimulation_results$x)
@@ -307,8 +303,8 @@ fig1a <- mc_output %>%
   ggplot(aes(x = project_outcome/1e6, colour = variables, fill = variables))+
   geom_density(alpha = 0.3)+
   theme_bw()+
-  xlab("NPV per hectare in million KES") + ylab("Density estimate")+
-  ggtitle("a) overall outcomes") +
+  xlab("NPV per hectare in million KES") + ylab("Density")+
+  ggtitle("a) Overall outcomes") +
   scale_colour_manual(name = "",
                     labels = c("Land consolidation","Status quo"),
                     values = c("#1a80bb", "deeppink"))+
@@ -349,34 +345,30 @@ fig1b <- mc_output %>%
   labs(x=" NPV in Million KES", y = "Frequency") +
   annotate(geom = "text",label = paste0(negative_percent, " %"), x = -34, y = 37,color = "black") +
   annotate(geom = "text", label = paste0(positive_percent, " %"), x = 20, y = 37,color = "black") +
-  theme_bw() + ggtitle("b) Decision land consolidation") +
-   # theme(plot.margin = margin(40, 40, 90, 40),
-   #      axis.title.x = element_text(margin = margin(t = 5))) +
+  theme_bw() + ggtitle("b) Decision land consolidation") + 
+   theme(plot.margin = margin(0, 0, 90, 0),
+        axis.title.x = element_text(margin = margin(t = 5))) +
   coord_cartesian(clip = "off") +  # Allow annotations outside plot area
   annotation_custom(grob = linesGrob(arrow = arrow(length = unit(0.25, "cm"), type = "open"), #arrow facing right
-                     gp = gpar(col = "black")), xmin = 5, xmax = 20, ymin = -15, ymax = -15) +
-  annotation_custom(grob = textGrob("Land consolidation preferable",
+                     gp = gpar(col = "black")), xmin = 5, xmax = 15, ymin = -15, ymax = -15) +
+  annotation_custom(grob = textGrob("Land consolidation \npreferable",
                     x = unit(0.8, "npc"), y = unit(-0.1, "npc"), 
-                    just = "left", gp = gpar(fontsize = 10)),
-    xmin = 22, xmax = 22, ymin = -15, ymax = -15 ) + 
-  annotation_custom(
-    grob = linesGrob(x = unit(c(1, 0), "npc"),  # Reverse direction for arrow
+                    just = "left", gp = gpar(fontsize = 10)), xmin = 22, xmax = 22, ymin = -15, ymax = -15 ) + 
+  annotation_custom(grob = linesGrob(x = unit(c(1, 0), "npc"),  # Reverse direction for arrow
                      arrow = arrow(length = unit(0.25, "cm"), type = "open"),
-                     gp = gpar(col = "black")),  
-    xmin = -5, xmax = -20, ymin = -15, ymax = -15) +
-  annotation_custom( grob = textGrob("Do nothing preferable",
+                     gp = gpar(col = "black")), xmin = -5, xmax = -15, ymin = -15, ymax = -15) +
+  annotation_custom( grob = textGrob("Do nothing \npreferable",
                     x = unit(0.8, "npc"), y = unit(-0.1, "npc"), 
-                    just = "left", gp = gpar(fontsize = 10)),
-    xmin = -48, xmax = -48, ymin = -15, ymax = -15 )
+                    just = "left", gp = gpar(fontsize = 10)), xmin = -50, xmax = -50, ymin = -15, ymax = -15 )
 
-fig1a + fig1b 
+fig1a + fig1b
 
-ggsave("figures/fig_1_MC_outcome_dist.png", width = 9, height = 5)
+# ggsave("figures/fig_1_MC_outcome_dist.png", width = 9, height = 5.5)
 
 ```
 
-## Variable of Importance and EVPI
-```{r, warning=FALSE, message=FALSE, fig.cap= "***Figure 2. *** *Sensitivity and value of information analyses of decision land consolidation.a) Important variables identified by PLS regresson analysis and expressed as VIP scores to indicate model sensitivity. b) Key uncertainties identified by expected value of perfect information. The outcomes are based on 1,000 model rums generated through Monte Carlo simulation.*"}
+## Variable of Importance and Expected Value of Perfect Information
+```{r, warning=FALSE, message=FALSE, fig.cap= "***Figure 2. *** *Sensitivity and value of information analyses of decision land consolidation. a) Important variables identified by PLS regresson analysis and expressed as VIP scores to indicate model sensitivity. b) Key uncertainties identified by expected value of perfect information metric. The outcomes are based on 1,000 model runs generated through Monte Carlo simulation.*"}
 
 pls_result <- plsr.mcSimulation( object = mcSimulation_results,
                                 resultName = names(mcSimulation_results$y[7]), ncomp = 1)
@@ -391,8 +383,7 @@ fig2a <- decisionSupport::plot_pls(pls_result,
         axis.title = element_text(size = 12),
         legend.text = element_text(size = 10)) 
 
-mcSimulation_table <- data.frame(mcSimulation_results$x,
-                                 mcSimulation_results$y[1:6])
+mcSimulation_table <- data.frame(mcSimulation_results$x, mcSimulation_results$y[1:6])
 evpi <- decisionSupport::multi_EVPI(mc = mcSimulation_table,
                                     first_out_var = "benefit_lc_usd")
 fig2b<- plot_evpi(evpi, decision_vars = "net_benefit_lc_kes", 
@@ -410,10 +401,11 @@ fig2a + fig2b
 ggsave("figures/fig_2_MC_VIP_EVPI.png", width = 9, height = 5)
 
 ```
-# Running the land consolidation monte carlo simulation with scenarios
+# Monte Carlo simulation with scenarios
 
-To create the classes of maize prices, we relied on daily maize price submissions on the Ministry of Agriculture and Livestock Department on https://amis.co.ke/site/market. We used data from 2005 to 2024. 
-```{r, maize_price_determination, warning=FALSE}
+Based on two most critical variables as shown in Figure 2b, maize and land prices, we created scenarios to report on how the decision changes with varying prices of maize and lease prices. To define the updates of maize and land price variables, we relied on different sources of data to create the bounds of the prices of each. For example, for maize prices, we looked at the daily maize price submissions on the Ministry of Agriculture and Livestock Department on https://amis.co.ke/site/market. Here, we took data published between 2005 to 2024 for Murang'a County. 
+
+```{r, maize_price_determination, warning=FALSE, fig.cap= "***Figure.S1. *** * Distribution of dry white maize prices in Kenya (a) and in Murang'a country (b).*"}
 
 folder_path <- "Input_tables/maize_prices/"
 csv_files <- list.files(path = folder_path, pattern = "*.csv", full.names = TRUE)
@@ -468,11 +460,11 @@ country+muranga
 ```
 
 
-Within the `decisionSupport` is a function called `scenario_mc`,  learnt of its existence recently, that allows one to create scenarios using specific variables. A separate .csv file with specific variables to be modified is created. Here, I created a scenario file `market_scenarios.csv` based on uncertain variables. The file is as below
+Within the `decisionSupport` is a function called `scenario_mc`, that allows one to create scenarios using specific variables. one has to create a separate .csv file with specific variables to be modified. Based on uncertain variables -maize and land prices- we created market prices scenario file `market_scenarios.csv`. The file is as below
 
 <br>
 
-***Table 1.*** *Specific model input variables that need to be updated to generate the market scenarios. These variables are chosen based on Figure 2b analysis of value of information. These variables are the most critical variables for the decision to consolidate land.*
+***Table 1.*** *Specific model input variables that need to be updated to generate the market scenarios. These variables are chosen based on the analysis of the value of information and the results of EVPI are as shown in Figure 2b. These variables are the most critical variables for the decision to consolidate land.*
 
 ```{r scenario_file}
 market_scenario_param <- read.csv("Input_tables/market_scenarios.csv", sep = ";")
@@ -486,7 +478,8 @@ market_scenario_param %>%
             rownames=FALSE)
 ```
 
-Trial run of the Monte Carlo simulation with scenarios 
+Running the `farmer` model function with the updated .csv file which we refer to as Monte Carlo simulation with scenarios 
+
 ```{r monte_carlo_simulation_with_scenarios, warning=FALSE}
 
 land_consolidation_scenarios <-scenario_mc(base_estimate = estimate_read_csv("Input_tables/land_consolidation_input.csv", sep=";"),
@@ -498,10 +491,10 @@ land_consolidation_scenarios <-scenario_mc(base_estimate = estimate_read_csv("In
 ```
 
 
-```{r, warning=FALSE, message =FALSE, include = FALSE, fig.dim = c(8,4), fig.cap="***Figure 0. *** *The decision outcome of land consolidation when the distribution of maize prices is posnorm, based on 1000 model runs of land consolidation model function.*" }
+```{r, warning=FALSE, message =FALSE, include = FALSE,  fig.cap="***Figure 0. *** *The decision outcome of land consolidation when the distribution of maize prices is changed from uniform to posnorm. Outcome based on 1000 model runs of land consolidation model function.*" }
 
+# Here, I use an example of a scenario... lets take scenario 1, where the only modification is the distribution type of the maize prices from uniform to posnorm.
 
-# Here, I Use an example of a scenario... lets take scenario 1, where the only modification is the distribution type of the maize prices from uniform to posnorm.
 scenarios <- read.csv("Input_tables/market_scenarios.csv", sep =";", fileEncoding = "UTF-8")
 scen_1 <- scenarios[,c(1,2,3)]
 scen1_consolidation <- scenario_mc(base_estimate = estimate_read_csv("Input_tables/land_consolidation_input.csv", sep=";"),
@@ -519,9 +512,10 @@ ggplot(scen1_consolidation$y, aes(net_benefit_lc_kes/1000000))+
 
 ```
 
-## Scenario 1: varying the prices of maize
-NB: when the decision is greater on the positive side, land consolidation yields more and vice versa.  
-```{r,warning =FALSE, message = FALSE, fig.cap="***Figure 3. *** *The decision outcome of land consolidation when maize price is varied, based on 1000 model runs of land consolidation model function.The red line indicated the point estimate given by the means of the distribution ranges of the prices of maize*"}
+## Varying the price of maize per kg
+NB: When the decision outcomes are positive (i.e., have positive values), land consolidation is preferred and when the outcomes are negative, do nothing option is preferable. 
+
+```{r,warning =FALSE, message = FALSE, fig.cap="***Figure 3. *** *The decision outcome of land consolidation when maize price is varied. The decision outcome is based on 1,000 model runs of land consolidation model function. Mio = Million.*"}
 
 scen_2 <- scenarios[,c(1,2,4)]
 scen2_consolidation <- scenario_mc(base_estimate = estimate_read_csv("Input_tables/land_consolidation_input.csv", sep=";"),
@@ -573,8 +567,9 @@ fig3a + fig3b + fig3c
 
 ```
 
-## Scenario 2: varying the prices of land 
-```{r,warning = FALSE, message=FALSE, fig.cap="***Figure 4. *** *The decision outcome of land consolidation when land price is varied, based on 1000 model runs of land consolidation model function.*"}
+## Varying the price of land per acre per season
+
+```{r,warning = FALSE, message=FALSE, fig.cap="***Figure 4. *** *The decision outcome of land consolidation when land price is varied. Outcome based on 1000 model runs of land consolidation model function. Mio = Million.*"}
 
 scen_5 <- scenarios[,c(1,2,7)]
 scen5_consolidation <- scenario_mc(base_estimate = estimate_read_csv("Input_tables/land_consolidation_input.csv", sep=";"),
@@ -619,14 +614,14 @@ scen7 <-ggplot(scen7_consolidation$y, aes(net_benefit_lc_kes/1000000))+
   xlab("Decision outcome (Mio KES)") + theme_bw()+
   ggtitle("c) KES 670K - IM")
 
-scen5/ scen6/scen7
+scen5 + scen6 + scen7
 
 ggsave("figures/Fig_4_decision_LC_varying_lp.png", width = 9, height = 15)
 ```
 
-## Scenario 3: Combining varing prices of  maize and land 
+## Combinations of maize and land prices
 
-```{r, message =FALSE, warning = FALSE, fig.cap="***Figure 5. *** *The decision outcome of land consolidation when maize and land prices are varied, based on 1000 model runs of land consolidation model function.*"}
+```{r, message =FALSE, warning = FALSE, fig.cap="***Figure 5. *** *The decision outcome of land consolidation when maize and land prices are varied. These outcomes are based on 1000 model runs of land consolidation model function. Mio = Million.*"}
 scen_8 <- scenarios[,c(1,2,10)]
 scen8_consolidation <- scenario_mc(base_estimate = estimate_read_csv("Input_tables/land_consolidation_input.csv", sep=";"),
                                    scenarios = scen_8,
@@ -763,7 +758,9 @@ ggsave("figures/Fig_5_decision_LC_varying_mp_lp.png", width = 12, height = 15)
 ```
 
 # Effect change of the critical variables 
-We compare the net benefit of land consolidation of different scenarios to the baseline net benefit. Table 2 shows the summary statistics of the net benefit for land consolidation, which can also be referred to as the decision. 
+
+Here, we compare the net benefit of land consolidation of different scenarios to the baseline net benefit of land consolidation. Table 2 shows the summary statistics of the net benefit for land consolidation, which can also be referred to as the decision of each scenario. 
+
 ```{r, warning = FALSE, message = FALSE}
 
 land_consolidation_scenarios$y[,"net_benefit_lc_per_ha"] <- land_consolidation_scenarios$y$net_benefit_lc_kes/land_consolidation_scenarios$x$ha_per_hh #standardise to per ha
@@ -821,7 +818,7 @@ kable(scenarios_summary_df, format = 'html',
 
 ```
 
-We also calculate the absolute and percent change of the net benefit for land consolidation with and without market scenarios. 
+We also calculated the absolute and relative change of the net benefit for land consolidation of different market scenarios. 
 
 ```{r, message=FALSE, warning=FALSE, fig.cap="***Figure 6. *** *The effect of varying market prices for maize and lease on the net benefit for land consolidation. Based on 1000 model runs of the land consolidation model function.  a) Change in net benefit in million KES and b) change in net benefit in percent.*" }
 
@@ -871,10 +868,10 @@ net_change<-netbenefit_lc[,grep("_change$", colnames(netbenefit_lc))] %>%
   pivot_longer(., cols = everything(), names_to = "market_prices", values_to = "lc_netbenefit_change") %>% 
   mutate(lower_bound = quantile(lc_netbenefit_change, 0.05, na.rm =T),
          upper_bound = quantile(lc_netbenefit_change, 0.95, na.rm = T)) %>% 
-  filter(lc_netbenefit_change>=lower_bound &lc_netbenefit_change<=upper_bound)
+  filter(lc_netbenefit_change>=lower_bound &lc_netbenefit_change<=upper_bound) 
 
 change_plot <- ggplot(net_change, aes(factor(market_prices), lc_netbenefit_change))+
-                      geom_violin(draw_quantiles = c(0.5), fill="light yellow")+
+                      # geom_violin(draw_quantiles = c(0.5), fill="light yellow")+
                       geom_boxplot(width = 0.2, fill= "yellow")+
   xlab("Market price scenarios")+ylab("Change in Million KES")+
   coord_flip()+theme_bw()+ ggtitle("a)")+
