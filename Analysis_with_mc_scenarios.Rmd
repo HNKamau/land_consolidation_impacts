@@ -33,6 +33,7 @@ library(tidyverse)
 library(magrittr)
 library(kableExtra)
 library(DT)
+library(grid)
 ```
 
 ```{r}
@@ -43,7 +44,8 @@ knitr::write_bib(c(.packages(),
                    'tidyverse',
                    'magrittr',
                    'kableExtra',
-                   'DT'), 'bib/packages.bib')
+                   'DT',
+                   'grid'), 'bib/packages.bib')
 
 ```
 
@@ -282,7 +284,7 @@ mcSimulation_results <-  decisionSupport::mcSimulation(
 ```
 # Results of the simulation
 ## Distribution of the outcomes
-```{r, warning=FALSE, message=FALSE, fig.cap= "***Figure 1. *** *Distribution of the outcomes given as Net Present Value and expressed per hectare of land. (a) the distribution of land consolidation and status quo (b) distribution of the DECISION for land consolidation. The outcomes are based on 1,000 model rums generated through Monte Carlo simulation.*"}
+```{r, warning=FALSE, message=FALSE, fig.dim = c(8, 4), fig.cap= "***Figure 1. *** *Distribution of the outcomes given as Net Present Value and expressed per hectare of land. (a) the distribution of land consolidation and status quo (b) distribution of the DECISION for land consolidation. The outcomes are based on 1,000 model rums generated through Monte Carlo simulation.*"}
 
 y_output<- as.data.frame(mcSimulation_results$y)
 x_output <- as.data.frame(mcSimulation_results$x)
@@ -313,11 +315,12 @@ fig1a <- mc_output %>%
   scale_fill_manual(name = "",
                       labels = c("Land consolidation","Status quo"),
                       values = c("#1a80bb", "deeppink"))+
-  theme(legend.position = c(0.96, 0.95),
+  theme(legend.position = c(0.98, 0.98),
         legend.justification = c("right", "top"), 
         legend.background = element_rect(fill = "transparent"))
 
-  # Decision land consolidate
+
+# Decision land consolidate
 
 percentages <- mc_output %>% 
   select(net_benefit_lc_kes) %>% 
@@ -344,12 +347,29 @@ fig1b <- mc_output %>%
   scale_fill_manual(values = custom_colors) +
   guides(fill = FALSE)+
   labs(x=" NPV in Million KES", y = "Frequency") +
-  annotate(geom = "text",label = paste0(negative_percent, " %"), x = -40, y = 40,color = "black") +
-  annotate(geom = "text", label = paste0(positive_percent, " %"), x = 40, y = 40,color = "black") +
-  theme_bw() + ggtitle("b) Decision land consolidation")
+  annotate(geom = "text",label = paste0(negative_percent, " %"), x = -34, y = 37,color = "black") +
+  annotate(geom = "text", label = paste0(positive_percent, " %"), x = 20, y = 37,color = "black") +
+  theme_bw() + ggtitle("b) Decision land consolidation") +
+   # theme(plot.margin = margin(40, 40, 90, 40),
+   #      axis.title.x = element_text(margin = margin(t = 5))) +
+  coord_cartesian(clip = "off") +  # Allow annotations outside plot area
+  annotation_custom(grob = linesGrob(arrow = arrow(length = unit(0.25, "cm"), type = "open"), #arrow facing right
+                     gp = gpar(col = "black")), xmin = 5, xmax = 20, ymin = -15, ymax = -15) +
+  annotation_custom(grob = textGrob("Land consolidation preferable",
+                    x = unit(0.8, "npc"), y = unit(-0.1, "npc"), 
+                    just = "left", gp = gpar(fontsize = 10)),
+    xmin = 22, xmax = 22, ymin = -15, ymax = -15 ) + 
+  annotation_custom(
+    grob = linesGrob(x = unit(c(1, 0), "npc"),  # Reverse direction for arrow
+                     arrow = arrow(length = unit(0.25, "cm"), type = "open"),
+                     gp = gpar(col = "black")),  
+    xmin = -5, xmax = -20, ymin = -15, ymax = -15) +
+  annotation_custom( grob = textGrob("Do nothing preferable",
+                    x = unit(0.8, "npc"), y = unit(-0.1, "npc"), 
+                    just = "left", gp = gpar(fontsize = 10)),
+    xmin = -48, xmax = -48, ymin = -15, ymax = -15 )
 
-
-fig1a + fig1b
+fig1a + fig1b 
 
 ggsave("figures/fig_1_MC_outcome_dist.png", width = 9, height = 5)
 
@@ -391,6 +411,62 @@ ggsave("figures/fig_2_MC_VIP_EVPI.png", width = 9, height = 5)
 
 ```
 # Running the land consolidation monte carlo simulation with scenarios
+
+To create the classes of maize prices, we relied on daily maize price submissions on the Ministry of Agriculture and Livestock Department on https://amis.co.ke/site/market. We used data from 2005 to 2024. 
+```{r, maize_price_determination, warning=FALSE}
+
+folder_path <- "Input_tables/maize_prices/"
+csv_files <- list.files(path = folder_path, pattern = "*.csv", full.names = TRUE)
+
+list_of_dfs <- lapply(csv_files, function(file) {
+  read.csv(file, sep = ";")  # read the csv files into data frame. 
+})
+# Optionally, add a column with the file name to track the source of each data frame
+list_of_dfs <- lapply(seq_along(list_of_dfs), function(i) {
+  df <- list_of_dfs[[i]]
+  df <- df %>%
+    mutate(Supply.Volume = as.numeric(Supply.Volume))  # Convert to numeric (or as.character() if preferred)
+  df$source_file <- basename(csv_files[i])  # Add file name as a new column to track the source
+  return(df) })
+
+
+
+combined_df <- bind_rows(list_of_dfs)
+
+combined_df <- combined_df %>%
+  mutate(
+    Wholesale = gsub("/Kg", "", Wholesale),           # Remove "/Kg"
+    Wholesale = gsub(",", "", Wholesale),             # Remove commas (if they exist)
+    Wholesale = trimws(Wholesale),                    # Remove any leading/trailing whitespaces
+    Wholesale = na_if(Wholesale, " -"),               # Convert " - " to NA
+    Wholesale = as.numeric(Wholesale),                # Convert to numeric
+    Retail = gsub("/Kg", "", Retail),                 # Same process for Retail
+    Retail = gsub(",", "", Retail),
+    Retail = trimws(Retail),
+    Retail = na_if(Retail, " -"),
+    Retail = as.numeric(Retail),
+    Date = as.Date(Date))                             # Change the date to be date
+
+country <- combined_df %>% 
+  select(Wholesale, Retail)  %>% 
+  pivot_longer(., cols = everything(), names_to = "market_type", values_to = "prices") %>% 
+  ggplot(aes(x=factor(market_type), y= prices))+
+  geom_boxplot(width = 0.1, color = "forestgreen") +
+  xlab("Market type") + ylab("Price in KES/Kg") +
+  theme_minimal() +ggtitle("a) Prices of dry maize in the country")
+
+
+muranga <-combined_df %>% filter(County == "Muranga") %>% 
+  select(Wholesale, Retail)  %>% 
+  pivot_longer(., cols = everything(), names_to = "market_type", values_to = "prices") %>% 
+  ggplot(aes(x=factor(market_type), y= prices))+
+  geom_boxplot(width = 0.1, color = "forestgreen") +
+  xlab("Market type") + ylab("Price in KES/Kg") +
+  theme_minimal() + ggtitle("b) Dry maize prices in Murang'a county")
+ 
+country+muranga
+```
+
 
 Within the `decisionSupport` is a function called `scenario_mc`,  learnt of its existence recently, that allows one to create scenarios using specific variables. A separate .csv file with specific variables to be modified is created. Here, I created a scenario file `market_scenarios.csv` based on uncertain variables. The file is as below
 
