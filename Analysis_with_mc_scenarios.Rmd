@@ -405,7 +405,7 @@ ggsave("figures/fig_2_MC_VIP_EVPI.png", width = 9, height = 5)
 
 Based on two most critical variables as shown in Figure 2b, maize and land prices, we created scenarios to report on how the decision changes with varying prices of maize and lease prices. To define the updates of maize and land price variables, we relied on different sources of data to create the bounds of the prices of each. For example, for maize prices, we looked at the daily maize price submissions on the Ministry of Agriculture and Livestock Department on https://amis.co.ke/site/market. Here, we took data published between 2005 to 2024 for Murang'a County. 
 
-```{r, maize_price_determination, warning=FALSE, fig.cap= "***Figure.S1. *** * Distribution of dry white maize prices in Kenya (a) and in Murang'a country (b).*"}
+```{r, maize_price_determination, warning=FALSE, fig.cap= "***Figure.S1. *** *Distribution of dry white maize prices in Kenya (a) and in Murang'a country (b).*"}
 
 folder_path <- "Input_tables/maize_prices/"
 csv_files <- list.files(path = folder_path, pattern = "*.csv", full.names = TRUE)
