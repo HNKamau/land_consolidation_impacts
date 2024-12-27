@@ -37,6 +37,7 @@ library(magrittr)
 library(kableExtra)
 library(DT)
 library(grid)
+library(scales)
 ```
 
 ```{r}
@@ -48,7 +49,8 @@ knitr::write_bib(c(.packages(),
                    'magrittr',
                    'kableExtra',
                    'DT',
-                   'grid'), 'bib/packages.bib')
+                   'grid',
+                   'scales'), 'bib/packages.bib')
 
 ```
 
@@ -345,7 +347,7 @@ fig1b <- mc_output %>%
   labs(x=" NPV in Million KES", y = "Frequency") +
   annotate(geom = "text",label = paste0(negative_percent, " %"), x = -34, y = 37,color = "black") +
   annotate(geom = "text", label = paste0(positive_percent, " %"), x = 20, y = 37,color = "black") +
-  theme_bw() + ggtitle("b) Decision land consolidation") + 
+  theme_bw() + ggtitle("b) Decision outcome for land consolidation") + 
    theme(plot.margin = margin(0, 0, 90, 0),
         axis.title.x = element_text(margin = margin(t = 5))) +
   coord_cartesian(clip = "off") +  # Allow annotations outside plot area
@@ -457,6 +459,7 @@ muranga <-combined_df %>% filter(County == "Muranga") %>%
   theme_minimal() + ggtitle("b) Dry maize prices in Murang'a county")
  
 country+muranga
+
 ```
 
 
@@ -515,7 +518,7 @@ ggplot(scen1_consolidation$y, aes(net_benefit_lc_kes/1000000))+
 ## Varying the price of maize per kg
 NB: When the decision outcomes are positive (i.e., have positive values), land consolidation is preferred and when the outcomes are negative, do nothing option is preferable. 
 
-```{r,warning =FALSE, message = FALSE, fig.cap="***Figure 3. *** *The decision outcome of land consolidation when maize price is varied. The decision outcome is based on 1,000 model runs of land consolidation model function. Mio = Million.*"}
+```{r,warning =FALSE, message = FALSE, fig.cap="***Figure S2. *** *The decision outcome of land consolidation when maize price is varied. The decision outcome is based on 1,000 model runs of land consolidation model function. Mio = Million.*"}
 
 scen_2 <- scenarios[,c(1,2,4)]
 scen2_consolidation <- scenario_mc(base_estimate = estimate_read_csv("Input_tables/land_consolidation_input.csv", sep=";"),
@@ -563,13 +566,11 @@ fig3c <-ggplot(scen4_consolidation$y, aes(net_benefit_lc_kes/1000000))+
 
 fig3a + fig3b + fig3c
 
-#ggsave("figures/Fig_3_decision_LC_varying_mp.png", width = 9, height = 5)
-
 ```
 
 ## Varying the price of land per acre per season
 
-```{r,warning = FALSE, message=FALSE, fig.cap="***Figure 4. *** *The decision outcome of land consolidation when land price is varied. Outcome based on 1000 model runs of land consolidation model function. Mio = Million.*"}
+```{r,warning = FALSE, message=FALSE, fig.cap="***Figure S3. *** *The decision outcome of land consolidation when land price is varied. Outcome based on 1000 model runs of land consolidation model function. Mio = Million.*"}
 
 scen_5 <- scenarios[,c(1,2,7)]
 scen5_consolidation <- scenario_mc(base_estimate = estimate_read_csv("Input_tables/land_consolidation_input.csv", sep=";"),
@@ -616,12 +617,11 @@ scen7 <-ggplot(scen7_consolidation$y, aes(net_benefit_lc_kes/1000000))+
 
 scen5 + scen6 + scen7
 
-ggsave("figures/Fig_4_decision_LC_varying_lp.png", width = 9, height = 15)
 ```
 
 ## Combinations of maize and land prices
 
-```{r, message =FALSE, warning = FALSE, fig.cap="***Figure 5. *** *The decision outcome of land consolidation when maize and land prices are varied. These outcomes are based on 1000 model runs of land consolidation model function. Mio = Million.*"}
+```{r, message =FALSE, warning = FALSE, fig.cap="***Figure S4. *** *The decision outcome of land consolidation when maize and land prices are varied. These outcomes are based on 1000 model runs of land consolidation model function. Mio = Million.*"}
 scen_8 <- scenarios[,c(1,2,10)]
 scen8_consolidation <- scenario_mc(base_estimate = estimate_read_csv("Input_tables/land_consolidation_input.csv", sep=";"),
                                    scenarios = scen_8,
@@ -754,7 +754,6 @@ scen16 <-ggplot(scen16_consolidation$y, aes(net_benefit_lc_kes/1000000))+
 (scen14 +scen15 +scen16)
 
 
-ggsave("figures/Fig_5_decision_LC_varying_mp_lp.png", width = 12, height = 15)
 ```
 
 # Effect change of the critical variables 
@@ -765,6 +764,10 @@ Here, we compare the net benefit of land consolidation of different scenarios to
 
 land_consolidation_scenarios$y[,"net_benefit_lc_per_ha"] <- land_consolidation_scenarios$y$net_benefit_lc_kes/land_consolidation_scenarios$x$ha_per_hh #standardise to per ha
 land_consolidation_scenarios$y[,"net_benefit_lc_per_ha_MKes"] <-land_consolidation_scenarios$y$net_benefit_lc_per_ha/1000000 # in millions for simplicity
+
+mcSimulation_results$y[,"net_benefit_lc_per_ha"] <- mcSimulation_results$y$net_benefit_lc_kes/mcSimulation_results$x$ha_per_hh
+mcSimulation_results$y[,"net_benefit_lc_per_ha_MKes"] <- mcSimulation_results$y$net_benefit_lc_per_ha/1000000
+baseline_lc <- mcSimulation_results$y$net_benefit_lc_per_ha_MKes
 
 low_mp <- land_consolidation_scenarios$y$net_benefit_lc_per_ha_MKes[land_consolidation_scenarios$x$Scenario == "Scen_2"]
 med_mp <- land_consolidation_scenarios$y$net_benefit_lc_per_ha_MKes[land_consolidation_scenarios$x$Scenario == "Scen_3"]
@@ -783,7 +786,8 @@ high_mp_med_lp <- land_consolidation_scenarios$y$net_benefit_lc_per_ha_MKes[land
 high_mp_lp <- land_consolidation_scenarios$y$net_benefit_lc_per_ha_MKes[land_consolidation_scenarios$x$Scenario == "Scen_16"]
 
 
-scenarios_summary <- rbind(data.frame("Low maize prices"=round(quantile(low_mp, c(0,0.05,0.5,0.95,1)),2),
+scenarios_summary <- rbind(data.frame("Baseline" = round(quantile(baseline_lc, c(0,0.05, 0.5, 0.95, 1)),2),
+                                      "Low maize prices"=round(quantile(low_mp, c(0,0.05,0.5,0.95,1)),2),
                                       "Medium maize prices"=round(quantile(med_mp,c(0, 0.05,0.5,0.95,1)),2),
                                       "High maize prices"=round(quantile(high_mp, c(0,0.05, 0.5, 0.95,1)),2),
                                       "Low lease prices"=round(quantile(low_lp, c(0,0.05, 0.5,0.95,1)),2),
@@ -818,14 +822,56 @@ kable(scenarios_summary_df, format = 'html',
 
 ```
 
+```{r,message =FALSE, warning = FALSE, fig.cap="***Figure 3. *** *The median values of the decision outcome of land consolidation when maize and land prices are varied. These outcomes are based on 1000 model runs of land consolidation model function.*"}
+
+netbenefit_lc_all <- cbind(data.frame(baseline_lc, low_mp, med_mp,high_mp, low_lp, med_lp, high_lp, low_mp_lp,low_mp_med_lp, low_mp_high_lp,
+                       med_mp_low_lp, med_mp_lp, med_mp_high_lp, high_mp_low_lp, high_mp_med_lp, high_mp_lp))
+
+netbenefit_lc_all %>% 
+  pivot_longer(cols = everything(), names_to = "scenarios", values_to = "net_benefit_lc") %>% 
+  group_by(scenarios) %>% 
+  mutate(scenarios = factor(scenarios, levels = c("baseline_lc","low_mp", "med_mp", "high_mp",
+                                                  "low_lp", "med_lp", "high_lp",
+                                                  "low_mp_lp", "low_mp_med_lp",
+                                                  "low_mp_high_lp", "med_mp_low_lp",
+                                                  "med_mp_lp", "med_mp_high_lp",
+                                                  "high_mp_low_lp", "high_mp_med_lp",
+                                                  "high_mp_lp"))) %>%
+  ggplot(aes(x=scenarios, y= net_benefit_lc))+
+  stat_summary(geom = 'col', fun = median)+
+  xlab("Market price scenarios") + ylab("Median net benefit for land consolidation (million KES) ")+
+  theme_minimal()+ coord_flip()+
+  # theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
+  scale_x_discrete(labels =c("low_mp" = "Low MP", 
+                             "med_mp" = "Medium MP", 
+                             "high_mp" = "High MP", 
+                             "low_lp" = "Low LP",
+                             "med_lp" = "Medium LP",
+                             "high_lp" = "High LP",
+                             "low_mp_lp" = "Low MP and LP",
+                             "low_mp_med_lp" = "Low MP and Medium LP", 
+                             "low_mp_high_lp" = "Low MP and high LP", 
+                             "med_mp_low_lp" = "Medium MP and low LP",
+                             "med_mp_lp" = "Medium MP and LP",
+                             "med_mp_high_lp" = "Medium MP and high LP", 
+                             "high_mp_low_lp" = "High MP and low LP",
+                             "high_mp_med_lp" = "High MP and Medium LP",
+                             "high_mp_lp" = "High MP and LP",
+                             "baseline_lc" = "Baseline")) 
+  
+  
+ 
+ggsave("figures/fig_3_net_benefit_scenarios.png", width = 9, height = 5) 
+
+```
 We also calculated the absolute and relative change of the net benefit for land consolidation of different market scenarios. 
 
-```{r, message=FALSE, warning=FALSE, fig.cap="***Figure 6. *** *The effect of varying market prices for maize and lease on the net benefit for land consolidation. Based on 1000 model runs of the land consolidation model function.  a) Change in net benefit in million KES and b) change in net benefit in percent.*" }
+```{r, message=FALSE, warning=FALSE, fig.cap="***Figure 4. *** *Change in net benefit for land consolidation given by the difference between outcomes of individual scenarios and baseline. Based on 1000 model runs of the land consolidation model function.*" }
 
 
-mcSimulation_results$y[,"net_benefit_lc_per_ha"] <- mcSimulation_results$y$net_benefit_lc_kes/mcSimulation_results$x$ha_per_hh
-mcSimulation_results$y[,"net_benefit_lc_per_ha_MKes"] <- mcSimulation_results$y$net_benefit_lc_per_ha/1000000
-baseline_lc <- mcSimulation_results$y$net_benefit_lc_per_ha_MKes
+# mcSimulation_results$y[,"net_benefit_lc_per_ha"] <- mcSimulation_results$y$net_benefit_lc_kes/mcSimulation_results$x$ha_per_hh
+# mcSimulation_results$y[,"net_benefit_lc_per_ha_MKes"] <- mcSimulation_results$y$net_benefit_lc_per_ha/1000000
+# baseline_lc <- mcSimulation_results$y$net_benefit_lc_per_ha_MKes
 
 netbenefit_lc <- cbind(data.frame(baseline_lc, low_mp, med_mp,high_mp, low_lp, med_lp, high_lp, low_mp_lp,low_mp_med_lp, low_mp_high_lp,
                        med_mp_low_lp, med_mp_lp, med_mp_high_lp, high_mp_low_lp, high_mp_med_lp, high_mp_lp))
@@ -846,6 +892,81 @@ netbenefit_lc[,"high_mp_low_lp_change"]<-netbenefit_lc$high_mp_low_lp-netbenefit
 netbenefit_lc[,"high_mp_med_lp_change"]<-netbenefit_lc$high_mp_med_lp-netbenefit_lc$baseline_lc
 netbenefit_lc[,"high_mp_lp_change"]<-netbenefit_lc$high_mp_lp-netbenefit_lc$baseline_lc
 
+netbenefit_lc[,grep("_change$", colnames(netbenefit_lc))] %>% 
+  pivot_longer(cols = everything(), names_to = "market_prices", values_to = "lc_netbenefit_change") %>% 
+  group_by(market_prices) %>% 
+  mutate(market_prices = factor(market_prices, levels = c("low_mp_change", "med_mp_change", "high_mp_change",
+                                                  "low_lp_change", "med_lp_change", "high_lp_change",
+                                                  "low_mp_lp_change", "low_mp_med_lp_change",
+                                                  "low_mp_high_lp_change", "med_mp_low_lp_change",
+                                                  "med_mp_lp_change", "med_mp_high_lp_change",
+                                                  "high_mp_low_lp_change", "high_mp_med_lp_change",
+                                                  "high_mp_lp_change"))) %>% 
+  ggplot(aes(x=market_prices, y = lc_netbenefit_change))+
+  stat_summary(geom = "col", fun = median) +
+  xlab("Market price scenarios") + ylab("Median change in net benefit for land consolidation \n (million KES)")+
+  coord_flip()+ theme_minimal()+
+  scale_x_discrete(labels =c("low_mp_change" = "Low MP", 
+                             "med_mp_change" = "Medium MP", 
+                             "high_mp_change" = "High MP", 
+                             "low_lp_change" = "Low LP",
+                             "med_lp_change" = "Medium LP",
+                             "high_lp_change" = "High LP",
+                             "low_mp_lp_change" = "Low MP and LP",
+                             "low_mp_med_lp_change" = "Low MP and Medium LP", 
+                             "low_mp_high_lp_change" = "Low MP and high LP", 
+                             "med_mp_low_lp_change" = "Medium MP and low LP",
+                             "med_mp_lp_change" = "Medium MP and LP",
+                             "med_mp_high_lp_change" = "Medium MP and high LP", 
+                             "high_mp_low_lp_change" = "High MP and low LP",
+                             "high_mp_med_lp_change" = "High MP and Medium LP",
+                             "high_mp_lp_change" = "High MP and LP" ))
+
+# net_change<-netbenefit_lc[,grep("_change$", colnames(netbenefit_lc))] %>% 
+#   pivot_longer(., cols = everything(), names_to = "market_prices", values_to = "lc_netbenefit_change") %>% 
+#   # mutate(lower_bound = quantile(lc_netbenefit_change, 0.05, na.rm =T),
+#   #        upper_bound = quantile(lc_netbenefit_change, 0.95, na.rm = T)) %>% 
+#   # filter(lc_netbenefit_change>=lower_bound &lc_netbenefit_change<=upper_bound) %>% 
+#   group_by(market_prices) %>%
+#   summarize(min_quantile = quantile(lc_netbenefit_change, 0.05, na.rm = T),
+#             median_value = median(lc_netbenefit_change, na.rm = TRUE),
+#             upp_quantile = quantile(lc_netbenefit_change, 0.95, na.rm = T)) %>% 
+#   pivot_longer(cols=c( "min_quantile", 'median_value',"upp_quantile"), 
+#                names_to = "quantile_levels",values_to = 'change')
+#   
+# ggplot(net_change, aes(x=market_prices, y =change, group = factor(quantile_levels))) +
+#   geom_point(aes(colour = factor(quantile_levels)))+ geom_path(aes(colour =factor( quantile_levels)))+
+#   coord_radial(start = 0.25 * pi, end = 1.75 * pi) +
+#   guides(
+#     theta = guide_axis_theta(angle = 90),
+#     r     = guide_axis(angle = 0) )+
+#   scale_x_discrete(labels =c("low_mp_change" = "Low MP", 
+#                              "med_mp_change" = "Medium MP", 
+#                              "high_mp_change" = "High MP", 
+#                              "low_lp_change" = "Low LP",
+#                              "med_lp_change" = "Medium LP",
+#                              "high_lp_change" = "High LP",
+#                              "low_mp_lp_change" = "Low MP and LP",
+#                              "low_mp_med_lp_change" = "Low MP and Medium LP", 
+#                              "low_mp_high_lp_change" = "Low MP and high LP", 
+#                              "med_mp_low_lp_change" = "Medium MP and low LP",
+#                              "med_mp_lp_change" = "Medium MP and LP",
+#                              "med_mp_high_lp_change" = "Medium MP and high LP", 
+#                              "high_mp_low_lp_change" = "High MP and low LP",
+#                              "high_mp_med_lp_change" = "High MP and Medium LP",
+#                              "high_mp_lp_change" = "High MP and LP" )) +
+#   scale_y_continuous(labels = label_number(suffix = " Million KES")) +
+#   theme_minimal() +
+#   labs(x = NULL, y = NULL) +
+#   scale_colour_manual(name = "",
+#                       labels = c("Median", "5 % quantile","95 % quantile"),
+#                       values = c("deeppink", "limegreen","#1a80bb"))+
+#   theme(legend.position = c(0.4, 0.97))
+
+ggsave("figures/Fig_4_change_in_decision.png", width = 9, height = 5)
+```
+
+```{r, working_with_median_values, fig.cap="***Figure S5. *** *Relative change in percent of the net benefit of land consolidation (decision). Based on 1000 moidel runs of the land consolidation model function.*"}
 
 netbenefit_lc[,"low_mp_change_relative"] <- (netbenefit_lc$low_mp-netbenefit_lc$baseline_lc)/netbenefit_lc$baseline_lc*100
 netbenefit_lc[,"med_mp_change_relative"] <- (netbenefit_lc$med_mp-netbenefit_lc$baseline_lc)/netbenefit_lc$baseline_lc*100
@@ -862,70 +983,98 @@ netbenefit_lc[,"med_mp_high_lp_change_relative"]<-(netbenefit_lc$med_mp_high_lp-
 netbenefit_lc[,"high_mp_low_lp_change_relative"]<-(netbenefit_lc$high_mp_low_lp-netbenefit_lc$baseline_lc)/netbenefit_lc$baseline_lc*100
 netbenefit_lc[,"high_mp_med_lp_change_relative"]<-(netbenefit_lc$high_mp_med_lp-netbenefit_lc$baseline_lc)/netbenefit_lc$baseline_lc*100
 netbenefit_lc[,"high_mp_lp_change_relative"]<-(netbenefit_lc$high_mp_lp-netbenefit_lc$baseline_lc)/netbenefit_lc$baseline_lc*100
-
-
-net_change<-netbenefit_lc[,grep("_change$", colnames(netbenefit_lc))] %>% 
-  pivot_longer(., cols = everything(), names_to = "market_prices", values_to = "lc_netbenefit_change") %>% 
-  mutate(lower_bound = quantile(lc_netbenefit_change, 0.05, na.rm =T),
-         upper_bound = quantile(lc_netbenefit_change, 0.95, na.rm = T)) %>% 
-  filter(lc_netbenefit_change>=lower_bound &lc_netbenefit_change<=upper_bound) 
-
-change_plot <- ggplot(net_change, aes(factor(market_prices), lc_netbenefit_change))+
-                      # geom_violin(draw_quantiles = c(0.5), fill="light yellow")+
-                      geom_boxplot(width = 0.2, fill= "yellow")+
-  xlab("Market price scenarios")+ylab("Change in Million KES")+
-  coord_flip()+theme_bw()+ ggtitle("a)")+
-  scale_x_discrete(labels =c("med_mp_lp_change" = "Medium MP and LP",
-                             "med_mp_low_lp_change" = "Medium MP and low LP", 
-                             "med_mp_high_lp_change" = "Medium MP and high LP", 
-                             "med_mp_change" = "Medium MP", 
-                             "med_lp_change" = "Medium LP",
-                             "low_lp_change" = "Low LP",
-                             "low_mp_med_lp_change" = "Low MP and Medium LP", 
-                             "low_mp_lp_change" = "Low MP and LP", 
-                             "low_mp_high_lp_change" = "Low MP and high LP", 
-                             "low_mp_change" = "Low MP", 
-                            "high_mp_med_lp_change" = "High MP and Medium LP",
-                            "high_mp_lp_change" = "High MP and LP", 
-                            "high_mp_low_lp_change" = "High MP and low LP", 
-                            "high_mp_change" = "High MP", 
-                            "high_lp_change" = "High LP"))
-
       
 pc_change<-netbenefit_lc[,grep("_change_relative$", colnames(netbenefit_lc))] %>%
   pivot_longer(., cols = everything(), names_to = "market_prices", values_to = "lc_netbenefit_pc_change") %>% 
-  mutate(lower_bound = quantile(lc_netbenefit_pc_change, 0.05, na.rm = T),
-         upper_bound = quantile(lc_netbenefit_pc_change, 0.95, na.rm = T)) %>%
-  filter(lc_netbenefit_pc_change >= lower_bound & lc_netbenefit_pc_change <= upper_bound)
+  group_by(market_prices) %>% 
+  mutate(market_prices = factor(market_prices, levels = c("low_mp_change_relative", "med_mp_change_relative", "high_mp_change_relative",
+                                                  "low_lp_change_relative", "med_lp_change_relative", "high_lp_change_relative",
+                                                  "low_mp_lp_change_relative", "low_mp_med_lp_change_relative",
+                                                  "low_mp_high_lp_change_relative", "med_mp_low_lp_change_relative",
+                                                  "med_mp_lp_change_relative", "med_mp_high_lp_change_relative",
+                                                  "high_mp_low_lp_change_relative", "high_mp_med_lp_change_relative",
+                                                  "high_mp_lp_change_relative")))  
 
+ggplot(pc_change, aes(x=market_prices, y = lc_netbenefit_pc_change)) +
+  stat_summary(geom = "col", fun = median)+ theme_bw()+
+  scale_x_discrete(labels =c("med_mp_lp_change_relative" = "Medium MP and LP",
+                             "med_mp_low_lp_change_relative" = "Medium MP and low LP",
+                             "med_mp_high_lp_change_relative" = "Medium MP and high LP",
+                             "med_mp_change_relative" = "Medium MP",
+                             "med_lp_change_relative" = "Medium LP",
+                             "low_lp_change_relative" = "Low LP",
+                             "low_mp_med_lp_change_relative" = "Low MP and Medium LP",
+                             "low_mp_lp_change_relative" = "Low MP and LP",
+                             "low_mp_high_lp_change_relative" = "Low MP and high LP",
+                             "low_mp_change_relative" = "Low MP",
+                            "high_mp_med_lp_change_relative" = "High MP and Medium LP",
+                            "high_mp_lp_change_relative" = "High MP and LP",
+                            "high_mp_low_lp_change_relative" = "High MP and low LP",
+                            "high_mp_change_relative" = "High MP",
+                            "high_lp_change_relative" = "High LP"))+
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1)) +
+  xlab("Market price scenarios") + ylab("Median relative change of net benefit for land consolidation (%)")
+  
 
-pc_plot <- ggplot(data=pc_change, aes(factor(market_prices),lc_netbenefit_pc_change))+
+pc_plot <- ggplot(data=pc_change, aes(x=factor(market_prices), y =lc_netbenefit_pc_change))+
   geom_violin(draw_quantiles= c(0.5),fill = "turquoise")+
-  ylab("Relative change (%)") + xlab("")+
-  theme_bw()+coord_flip()+ggtitle("b)")+ 
-  theme(axis.text.y = element_blank(),  
-    axis.title.y  = element_blank(), 
-    axis.ticks.y  = element_blank())
-  # scale_x_discrete(labels =c("med_mp_lp_change_relative" = "Medium MP and LP",
-  #                            "med_mp_low_lp_change_relative" = "Medium MP and low LP", 
-  #                            "med_mp_high_lp_change_relative" = "Medium MP and high LP", 
-  #                            "med_mp_change_relative" = "Medium MP", 
-  #                            "med_lp_change_relative" = "Medium LP",
-  #                            "low_lp_change_relative" = "Low LP",
-  #                            "low_mp_med_lp_change_relative" = "Low MP and Medium LP", 
-  #                            "low_mp_lp_change_relative" = "Low MP and LP", 
-  #                            "low_mp_high_lp_change_relative" = "Low MP and high LP", 
-  #                            "low_mp_change_relative" = "Low MP", 
-  #                           "high_mp_med_lp_change_relative" = "High MP and Medium LP",
-  #                           "high_mp_lp_change_relative" = "High MP and LP", 
-  #                           "high_mp_low_lp_change_relative" = "High MP and low LP", 
-  #                           "high_mp_change_relative" = "High MP", 
-  #                           "high_lp_change_relative" = "High LP"))
+  ylab("Relative change (%)") + xlab("Market price scenarios")+
+  theme_bw() + coord_flip() + ggtitle("Relative change")+ 
+  scale_x_discrete(labels =c("low_mp_change_relative" = "Low MP",
+                               "med_mp_change_relative" = "Medium MP",
+                               "high_mp_change_relative" = "High MP",
+                               "low_lp_change_relative" = "Low LP",
+                               "med_lp_change_relative" = "Medium LP",
+                               "high_lp_change_relative" = "High LP",
+                               "low_mp_lp_change_relative" = "Low MP and LP",
+                               "low_mp_med_lp_change_relative" = "Low MP and Medium LP",
+                               "low_mp_high_lp_change_relative" = "Low MP and high LP",
+                               "med_mp_low_lp_change_relative" = "Medium MP and low LP",
+                               "med_mp_lp_change_relative" = "Medium MP and LP",
+                               "med_mp_high_lp_change_relative" = "Medium MP and high LP",
+                               "high_mp_low_lp_change_relative" = "High MP and low LP",
+                               "high_mp_med_lp_change_relative" = "High MP and Medium LP",
+                               "high_mp_lp_change_relative" = "High MP and LP" ))
 
 
-change_plot + pc_plot
 
-ggsave("figures/fig_6_effect_change_on_decision.png", width = 9, height = 5)                
+pc_change2 <- pc_change %>% 
+group_by(market_prices) %>%
+summarize(min_quantile = quantile(lc_netbenefit_pc_change, 0.05, na.rm = T),
+              median_value = median(lc_netbenefit_pc_change, na.rm = TRUE),
+              upp_quantile = quantile(lc_netbenefit_pc_change, 0.95, na.rm = T)) %>%
+    pivot_longer(cols=c( "min_quantile", 'median_value',"upp_quantile"),
+                 names_to = "quantile_levels",values_to = 'pc_change')
+
+  ggplot(pc_change2, aes(x=market_prices, y =pc_change, group = factor(quantile_levels))) +
+    geom_point(aes(colour = factor(quantile_levels)))+ geom_path(aes(colour =factor(quantile_levels)))+
+    coord_radial(start = 0.25 * pi, end = 1.75 * pi) +
+    guides(
+      theta = guide_axis_theta(angle = 90),
+      r     = guide_axis(angle = 0) )+
+    scale_x_discrete(labels =c("low_mp_change_relative" = "Low MP",
+                               "med_mp_change_relative" = "Medium MP",
+                               "high_mp_change_relative" = "High MP",
+                               "low_lp_change_relative" = "Low LP",
+                               "med_lp_change_relative" = "Medium LP",
+                               "high_lp_change_relative" = "High LP",
+                               "low_mp_lp_change_relative" = "Low MP and LP",
+                               "low_mp_med_lp_change_relative" = "Low MP and Medium LP",
+                               "low_mp_high_lp_change_relative" = "Low MP and high LP",
+                               "med_mp_low_lp_change_relative" = "Medium MP and low LP",
+                               "med_mp_lp_change_relative" = "Medium MP and LP",
+                               "med_mp_high_lp_change_relative" = "Medium MP and high LP",
+                               "high_mp_low_lp_change_relative" = "High MP and low LP",
+                               "high_mp_med_lp_change_relative" = "High MP and Medium LP",
+                               "high_mp_lp_change_relative" = "High MP and LP" )) +
+    scale_y_continuous(labels = label_number(suffix = "%")) +
+    theme_minimal() +
+    labs(x = NULL, y = NULL) +
+    scale_colour_manual(name = "",
+                        labels = c("Median", "5 % quantile","95 % quantile"),
+                        values = c("deeppink", "limegreen","#1a80bb"))+
+    theme(legend.position = c(0.4, 0.97))
+
 ```
 
 
