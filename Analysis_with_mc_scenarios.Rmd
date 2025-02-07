@@ -19,6 +19,7 @@ output:
 
 This document is a supplementary resource and contains the description of the land consolidation model used to simulate outcomes of the decision to consolidate land in Kenya by smallholder farmers. Data used in this model, was collected in March 2024 after co-creating a conceptual model with the stakeholders.  
 
+<!-- Data might be 'expert estimates' or something similar -->
 
 # Install the necessary packages
 Must have R packages  are `decisionSupport`[@R-decisionSupport], `tidyverse`[@R-tidyverse], and `ggplot2` [@ggplot22016]. 
@@ -54,7 +55,7 @@ knitr::write_bib(c(.packages(),
 
 ```
 
-# Transcribing conceptual model to a land consolidation function
+# Transcribing the conceptual model to a land consolidation function
 
 Conceptual model co-created with stakeholders reflected the costs, benefits, and risks that could arise when shifting from the small and highly diversified farms to a model where farmers consolidate their land under the management of someone else. Varied benefits and costs can be envisioned from the current system of small farms and from a model where farmers consolidate land. For example, 
 
