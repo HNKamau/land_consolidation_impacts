@@ -57,7 +57,7 @@ knitr::write_bib(c(.packages(),
 
 # Transcribing the conceptual model to a land consolidation function
 
-Conceptual model co-created with stakeholders reflected the costs, benefits, and risks that could arise when shifting from the small and highly diversified farms to a model where farmers consolidate their land under the management of someone else. Varied benefits and costs can be envisioned from the current system of small farms and from a model where farmers consolidate land. For example, 
+Our conceptual model was co-created with stakeholders to reflect the costs, benefits, and risks that could arise when shifting from the small and highly diversified farms to a model where farmers consolidate their land under the management of someone else. Varied benefits and costs can be envisioned from the current system of small farms and from a model where farmers consolidate land. For example, 
 
 Costs that a farmer could incur in a land consolidated option
 
@@ -88,182 +88,35 @@ Benefits that accrue in the do nothing option
 * Saved food costs
 
 The above options are also faced by risks. Risks facing farmers who shift include social risks as a result of freed time while risks associated with crops will face farmers in the do nothing option. 
-NB: Shifting to a land consolidation model, is for a period of 25 years. During this time frame, the farmer can longer farm on the piece of land consolidated, but can receive lease income commensurate to the size of the land. 
 
-Below is a series of equations that define the above costs, benefits, and risks for both options  in the function `farmer`. The calculations help us find out what land consolidation truly renders by calculating the difference between the options. This difference is the DECISION that can inform on viability of land consolidation for the farmers. To calculate the decision, the below equation takes a wide range of inputs, which means, uncertainty is unavoidable.  
+*Shifting to a land consolidation model, is for a period of 25 years. During this time frame, the farmer can longer farm on the piece of land consolidated, but can receive lease income commensurate to the size of the land.*
+<!-- not clear what NB is here  -->
+<!-- text without spaces becomes part of the previous argument (indent is not enough) -->
 
+Below is a series of equations that define the above costs, benefits, and risks for both options  in the function `farmer`. The calculations help us find out land consolidation effects by calculating the difference between the options. This difference is the **decision** that can influence viability of land consolidation for the farmers. To calculate the decision, the below equation takes a wide range of inputs, which means, uncertainty is unavoidable.  
+
+<!-- I will be surprised if <br> works, generaly we need latex arguments -->
 <br>
 
+```{r make_variables}
+# function to make variables and test the model
+# used only in model construction
+
+make_variables <- function(est,n=1)
+{x <- decisionSupport::random(rho=est,n=n)
+for(i in colnames(x))assign(i, as.numeric(x[1,i]),envir=.GlobalEnv)}
+
+# I had to do some work to get the separators to work here
+
+make_variables(decisionSupport::estimate_read_csv(paste("Input_tables/land_consolidation_input.csv", sep=",")))
+
+```
+
+<!-- I find it is usually better to move large r scripts to a .R file and use them in the RMD with 'source'  -->
+
 ```{r land_consolidation_function}
-set.seed(254)
-
-farmer <- function(x, varnames)
-  {
-
-# A) do nothing benefits ####
-# We use maize as the reference crop 
-# ex-ante risks to farmers crops
-natural_hazard
-pest_disease_risk
-farmer_inadequate_funds_risk
-late_planting_risk
-health_risk
-
-prop_maize_yield_lost_hazard <- chance_event(natural_hazard, 
-                  yield_loss_drought/100, 0, gen_CV, n=n_years,
-                  one_draw = FALSE)
-
-prop_maize_yield_lost_disease <- chance_event(pest_disease_risk,
-                  yield_loss_disease/100, 0, gen_CV,n=n_years, 
-                  one_draw = FALSE)
-
-prop_maize_yield_lost_input_constraint <- 
-  chance_event(farmer_inadequate_funds_risk, yield_loss_due_to_input_constraint,
-              0, gen_CV, n=n_years, one_draw = FALSE)
-
-prop_maize_yield_lost_management <- 
-       chance_event(min(late_planting_risk, health_risk),
-       yield_loss_due_to_management, 0, gen_CV, n=n_years,
-       one_draw = FALSE)
-
-#effects of all the above risks                                                                        
-farm_risks <- sapply(c(prop_maize_yield_lost_hazard + 
-         prop_maize_yield_lost_disease + prop_maize_yield_lost_input_constraint
-         + prop_maize_yield_lost_management),function(x) min(x,1))
-
-farmer_yield_t_ha <- vv(maize_yield_t_ha, gen_CV, n_years) * no_of_seasons
-
-adjusted_farmer_yield_t_ha <- farmer_yield_t_ha * (1 - farm_risks)
-
-
-crop_benefit <- 
-  adjusted_farmer_yield_t_ha * 
-  ha_per_hh * 1000 * # conversion to kg/ha
-  vv(maize_price_kes_kg, gen_CV, n_years) 
-
-# natural capital  
-adjusted_value_of_assets <-vv(value_of_farm_assets, gen_CV, n_years,relative_trend = inflation_rate)
-
-# Food cost saved from food accessible from the farm 
-annual_saved_food_cost <- vv(saved_food_cost_pm, gen_CV, n_years,relative_trend = inflation_rate) * 12 
-
-status_quo_benefit <- crop_benefit + adjusted_value_of_assets + annual_saved_food_cost
-
-# B) do nothing costs ####
-# medical Bills from farm related stresses
- medical_bills <- prop_hhincome_spent_on_hospital/100 * vv(hh_income_pa, gen_CV,n_years)
- 
-# production costs for the farm
- farming_costs <- vv(production_costs_saved_acre, gen_CV, n_years,relative_trend = inflation_rate)*
-                   ha_per_hh * ha_acre_conversion * no_of_seasons
- 
- # planning cost involves legal fee and the cost of knowledge acquisition
- farmer_plan_cost  <- planning_cost
- 
- status_quo_cost <- medical_bills + farming_costs + farmer_plan_cost
-                                                           
-# C) Farmer  costs  with land consolidation ####
- farmer_one_time_cost <- cost_of_disruption_kes + # Damages on physical assets
-                         hhupkeep_prior_to_first_payment # HH income needed to sustain the hh prior 1st payment
-  
- # planning cost involves legal fee and the cost of knowledge acquisition
-farmer_plan_cost  <- planning_cost
-  
-farmer_recurring_cost <- adjusted_value_of_assets + # loss
-                    annual_saved_food_cost # Food unavailable from farm directly
-  
-land_consolidation_cost <-  farmer_one_time_cost +  farmer_plan_cost + farmer_recurring_cost
-
-# D) Farmer Benefits with land consolidation ####
-# farmer's annual compensation 
-lessor_fee <-vv(compensation_income_pm_acre, gen_CV, n_years)* 2 * ha_per_hh * ha_acre_conversion
-
-#off farm employments and wages
-off_farm_income <-vv(off_farm_income_kes_pm, gen_CV, n_years) *12
-
-#income saved: production costs for farming
-production_costs_saved <- farming_costs
-# hospital bills saved (proxy for long term health) from farm related stresses
-medical_bills_saved <- medical_bills  
-
-# social cohesion benefit
-# social cohesion is expressed as a factor of free time as a result of the the intervention. With the intervention, free time is associated with social cohesion through community participation and involvement. We quantify it by the cost of labor per hour. First, risks that threaten social cohesion are anti-social behaviors e.g crime, drug use, theft and domestic conflict - They take up time that would otherwise be used for community cooperation or activities
-  
-social_time_risk <- max(vice_risk,domesticconflict_risk)
-
-adjusted_social_time <- vv(social_time_hr_day, gen_CV, n_years) * (1-social_time_risk)
-social_cohesion <- adjusted_social_time * vv(labour_cost_kes_hr, gen_CV, n_years, 
-                                             relative_trend = inflation_rate)
-      
-# Better childhood benefit = long term benefit is education quantified by child's contribution to family farm labor weekly and the value of hired labor
-    
-better_childhood <- child_farm_time_hr_week * children_per_hh * n_weeks_child_farm_time *
-                        vv(labour_cost_kes_hr, gen_CV, n_years, relative_trend = inflation_rate ) 
-
-land_consolidation_benefit <-lessor_fee + off_farm_income + production_costs_saved + 
-                             sale_of_hh_items_not_needed + medical_bills_saved + 
-                             social_cohesion + better_childhood
-
-# E) Calculate net benefit ####
-status_quo_netbenefit <- status_quo_benefit - status_quo_cost
-status_quo_netbenefit_usd <- status_quo_netbenefit/currency_change
-    
-land_consolidation_netbenefit <- land_consolidation_benefit - land_consolidation_cost
-land_consolidation_netbenefit_usd <- land_consolidation_netbenefit/currency_change
-
-# Calculate NPV categorized costs and benefits ####
-food_cost_saved_npv <- discount(annual_saved_food_cost, discount_rate,calculate_NPV = TRUE)
-natural_assets_npv <- discount(adjusted_value_of_assets, discount_rate,calculate_NPV = T)
-lease_npv <- discount(lessor_fee, discount_rate, calculate_NPV = T)
-prdn_costs_npv <- discount(farming_costs, discount_rate, calculate_NPV = T)
-alt_income_npv <- discount(off_farm_income, discount_rate, calculate_NPV = T)
-better_childhood_npv <- discount(better_childhood, discount_rate,calculate_NPV = T)
-social_npv <- discount(social_cohesion, discount_rate, calculate_NPV = T)
-medical_npv <- discount(medical_bills_saved, discount_rate, calculate_NPV = T)
-crop_npv <- discount(crop_benefit, discount_rate, calculate_NPV = T)
-
-
-# NPV ####
-NPV_land_consolidation_netbenefit <- discount(land_consolidation_netbenefit, discount_rate, calculate_NPV = TRUE)
-NPV_land_consolidation_netbenefit_usd <- discount(land_consolidation_netbenefit_usd, discount_rate, calculate_NPV = T)
-
-
-NPV_status_quo_netbenefit <- discount(status_quo_netbenefit, discount_rate, calculate_NPV = TRUE)
-NPV_status_quo_netbenefit_usd <- discount(status_quo_netbenefit_usd, discount_rate, calculate_NPV = T)
-
-# Benefit cost ratio ####
-# without intervention
-npv_status_quo_benefit <- discount(status_quo_benefit, discount_rate, calculate_NPV = T)
-npv_status_quo_cost <- discount(status_quo_cost, discount_rate, calculate_NPV = T)
-bcr_status_quo <-npv_status_quo_benefit/npv_status_quo_cost
-
-# with intervention
-npv_land_consolidation_benefit <- discount(land_consolidation_benefit, discount_rate, calculate_NPV = T)
-npv_land_consolidation_cost <- discount(land_consolidation_cost, discount_rate, calculate_NPV = T)
-bcr_land_consolidation  <- npv_land_consolidation_benefit/npv_land_consolidation_cost
-
-
-   return(list(benefit_lc_kes = NPV_land_consolidation_netbenefit,
-               benefit_status_quo_kes = NPV_status_quo_netbenefit,
-               net_benefit_lc_kes = NPV_land_consolidation_netbenefit - NPV_status_quo_netbenefit, 
-               benefit_lc_usd = NPV_land_consolidation_netbenefit_usd,
-               benefit_status_quo_usd = NPV_status_quo_netbenefit_usd,
-               net_benefit_lc_usd = NPV_land_consolidation_netbenefit_usd - NPV_status_quo_netbenefit_usd,
-               BCR_status_quo = bcr_status_quo,
-               BCR_lc = bcr_land_consolidation,
-               Food_money_saved = food_cost_saved_npv,
-               Natural_assets = natural_assets_npv,
-               Planning = farmer_plan_cost, 
-               Disruption_cost = farmer_one_time_cost,
-               Lease = lease_npv, 
-               Production_costs = prdn_costs_npv, 
-               Alternative_income = alt_income_npv, 
-               Childhood = better_childhood_npv,
-               Social = social_npv,
-               Medical = medical_npv,
-               Annual_yield = crop_npv,
-               Cashflow_decision_do = land_consolidation_netbenefit - status_quo_netbenefit))
-}
+# Source the function land_consolidation_function.R
+source("Scripts/land_consolidation_function.R")
 
 ```
 
@@ -274,7 +127,8 @@ Now we run a Monte Carlo simulation of the model function above using the inputs
 ```{r monte carlo simulation}
 
 mcSimulation_results <-  decisionSupport::mcSimulation(
-  estimate = estimate_read_csv("Input_tables/land_consolidation_input.csv", sep =";"),
+  estimate = decisionSupport::estimate_read_csv(paste("Input_tables/land_consolidation_input.csv", sep=",")),
+  # CW NOTE updated the file here (replace ; with ')
   model_function = farmer,
   numberOfModelRuns = 1e4,
   functionSyntax = "plainNames")
@@ -393,7 +247,8 @@ fig1a + fig1b
 pls_result <- plsr.mcSimulation( object = mcSimulation_results,
                                 resultName = names(mcSimulation_results$y[3]), ncomp = 1)
 fig2a <- decisionSupport::plot_pls(pls_result,
-    input_table = read.csv("Input_tables/land_consolidation_input.csv", sep=";"),
+    input_table = read.csv("Input_tables/land_consolidation_input.csv", sep=","),
+    # CW Note I changed this to work on my machone
                           threshold = 1,
     pos_color = "#1a80bb", #blue
     neg_color = "#ea801c") + #orange  
@@ -408,7 +263,8 @@ mcSimulation_table <- data.frame(mcSimulation_results$x, mcSimulation_results$y[
 evpi <- decisionSupport::multi_EVPI(mc = mcSimulation_table,
                                     first_out_var = "benefit_lc_kes")
 fig2b<- plot_evpi(evpi, decision_vars = "net_benefit_lc_kes", 
-                  input_table = read.csv("Input_tables/land_consolidation_input.csv", sep = ";"),
+                  input_table = read.csv("Input_tables/land_consolidation_input.csv", sep = ","),
+                  # CW Note changed this .csv too
                   bar_color = "#1a80bb",
                   x_axis_name = "EVPI in KES",
                   new_names = "") +
