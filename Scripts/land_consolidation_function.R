@@ -102,9 +102,8 @@ land_consolidation_function <- function(x, varnames)
   
   
   # Off farm employment and wages
-  # Employment options might be low given the 
+  # Employment options might be low due to the average age of the farmers which is ar 54years Kamau et al. 2018 (https://doi.org/10.1016/j.jrurstud.2017.12.014). Nevertheless, according to the Murang'a CIDP 2018, rural self employment opportunities are increasing with increasing expansion of towns and market centres. Additionally, the the Murang'a people have on average of 9 years in education with a maximum of 19 years and about 88% of the households can read and write Kamau et al. 2018 (https://doi.org/10.1016/j.jrurstud.2017.12.014).  
   off_farm_income <- vv(off_farm_income_kes_pm, gen_CV, n_years) * 12   # pm is per month
-
   
   #income saved: production costs for farming
   production_costs_saved <- farming_costs
