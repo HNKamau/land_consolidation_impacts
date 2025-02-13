@@ -67,6 +67,19 @@ Costs that a farmer could incur in a land consolidated option
 * Household upkeep cost prior to the first payment 
 * Medical bills due to reduced active lifestyle
 
+# Transcribing conceptual model to a land consolidation function
+
+Conceptual model co-created with stakeholders reflected the costs, benefits, and risks that could arise when shifting from the small and highly diversified farms to a model where farmers consolidate their land under the management of someone else. Varied benefits and costs can be envisioned from the current system of small farms and from a model where farmers consolidate land. For example, 
+
+Costs that a farmer could incur in a land consolidated option
+
+* Planning costs (legal fee, knowledge acquisition) 
+* Loss of natural assets e.g., trees
+* Food costs not saved
+* Household upkeep cost prior to the first payment 
+* Medical bills due to reduced active lifestyle
+
+
 Benefits that a farmer could get in a land consolidated option
 
 * Lease income 
@@ -74,12 +87,14 @@ Benefits that a farmer could get in a land consolidated option
 * Alternative income from on or off farm activities
 * Better childhood
 * Social cohesion
+* Saved medical bills related to land use accidents/diseases
 
 
 Costs incurred by a farmer who remains in the current system of small farms, henceforth referred to as "do nothing" option
 
 * Planning costs (Whether the farmer decides to change or not, (s)he will have incurred the cost of planning)
 * Medical bills related to land use accidents/diseases ans stress
+* Medical bills related to land use accidents/diseases
 * Production costs
 
 Benefits that accrue in the do nothing option
@@ -236,7 +251,7 @@ fig1b <- mc_output %>%
                     just = "left", gp = gpar(fontsize = 10)), xmin = -85, xmax = -85, ymin = -75, ymax = -75 ) +
   theme(axis.title = element_text(size = 12, face = "bold"),
         axis.text = element_text(size = 10))
-
+   
 fig1a + fig1b
 
 # ggsave("figures/fig_1_MC_outcome_dist.png", width = 9, height = 5.5)
@@ -275,6 +290,8 @@ fig2b<- plot_evpi(evpi, decision_vars = "net_benefit_lc_kes",
 
 fig2a + fig2b
 
+# ggsave("figures/fig_2_MC_VIP_EVPI.png", width = 9, height = 5)
+
 ```
 # Monte Carlo simulation with scenarios
 
@@ -295,8 +312,6 @@ list_of_dfs <- lapply(seq_along(list_of_dfs), function(i) {
     mutate(Supply.Volume = as.numeric(Supply.Volume))  # Convert to numeric (or as.character() if preferred)
   df$source_file <- basename(csv_files[i])  # Add file name as a new column to track the source
   return(df) })
-
-
 
 combined_df <- bind_rows(list_of_dfs)
 
@@ -323,8 +338,7 @@ country <- combined_df %>%
   theme_minimal() +ggtitle("a) Prices of dry maize in the country")+
   theme(axis.title = element_text(size = 12, face = "bold"),
         axis.text = element_text(size = 10))
-
-
+        
 muranga <-combined_df %>% filter(County == "Muranga") %>% 
   select(Wholesale, Retail)  %>% 
   pivot_longer(., cols = everything(), names_to = "market_type", values_to = "prices") %>% 
@@ -334,7 +348,7 @@ muranga <-combined_df %>% filter(County == "Muranga") %>%
   theme_minimal() + ggtitle("b) Dry maize prices in Murang'a county")+
   theme(axis.title = element_text(size = 12, face = "bold"),
         axis.text = element_text(size = 10))
- 
+
 country+muranga
 
 ```
@@ -367,7 +381,6 @@ land_consolidation_scenarios <-scenario_mc(base_estimate = estimate_read_csv("In
                                model_function = land_consolidation_function,
                                numberOfModelRuns = 10000,
                                functionSyntax = "plainNames")
-
 ```
 
 ## Varying the price of maize per kg
@@ -477,6 +490,7 @@ scen4 + scen5 + scen6
 ## Combinations of maize and land prices
 
 ```{r, message =FALSE, warning = FALSE, fig.cap="***Figure S4. *** *The decision outcome of land consolidation when maize and land prices are varied. These outcomes are based on 1000 model runs of land consolidation model function. Mio = Million.*"}
+
 scen_7 <- scenarios[,c(1,2,9)]
 scen7_consolidation <- scenario_mc(base_estimate = estimate_read_csv("Input_tables/land_consolidation_input.csv", sep=","),
                                    scenarios = scen_7,
@@ -495,7 +509,7 @@ scen_8 <- scenarios[,c(1,2,10)]
 scen8_consolidation <- scenario_mc(base_estimate = estimate_read_csv("Input_tables/land_consolidation_input.csv", sep=","),
                                    scenarios = scen_8,
                                    model_function = land_consolidation_function,
-                                   numberOfModelRuns = 1000,
+                                    numberOfModelRuns = 1000,
                                    functionSyntax = "plainNames")
 
 scen8 <-ggplot(scen8_consolidation$y, aes(net_benefit_lc_kes/1000000))+
@@ -608,7 +622,6 @@ scen15 <-ggplot(scen15_consolidation$y, aes(net_benefit_lc_kes/1000000))+
 (scen10 + scen11 + scen12)/
 (scen13 + scen14 +scen15)
 
-
 ```
 
 # Impact of the market price scenarios
@@ -623,6 +636,7 @@ land_consolidation_scenarios$y[,"net_benefit_lc_per_ha_MKes"] <-land_consolidati
 mcSimulation_results$y[,"net_benefit_lc_per_ha"] <- mcSimulation_results$y$net_benefit_lc_kes/mcSimulation_results$x$ha_per_hh
 mcSimulation_results$y[,"net_benefit_lc_per_ha_MKes"] <- mcSimulation_results$y$net_benefit_lc_per_ha/1000000
 baseline_lc <- mcSimulation_results$y$net_benefit_lc_per_ha_MKes
+
 
 low_mp <- land_consolidation_scenarios$y$net_benefit_lc_per_ha_MKes[land_consolidation_scenarios$x$Scenario == "Scen_1"]
 med_mp <- land_consolidation_scenarios$y$net_benefit_lc_per_ha_MKes[land_consolidation_scenarios$x$Scenario == "Scen_2"]
@@ -744,7 +758,6 @@ netbenefit_lc_all %>%
   theme(axis.title = element_text(size = 12, face = "bold"),
         axis.text = element_text(size = 10))
   
-  
  
 # ggsave("figures/fig_3_net_benefit_scenarios.png", width = 9, height = 5) 
 
@@ -808,8 +821,51 @@ netbenefit_lc[,grep("_change$", colnames(netbenefit_lc))] %>%
                              "high_mp_lp_change" = "High MP and LP" )) + 
   theme(axis.title = element_text(size = 12, face = "bold"),
         axis.text = element_text(size = 10))
+
 ggsave("figures/Fig_8_market_scenario_change.png", width = 7, height = 5, dpi = 300)
 
+# net_change<-netbenefit_lc[,grep("_change$", colnames(netbenefit_lc))] %>% 
+#   pivot_longer(., cols = everything(), names_to = "market_prices", values_to = "lc_netbenefit_change") %>% 
+#   # mutate(lower_bound = quantile(lc_netbenefit_change, 0.05, na.rm =T),
+#   #        upper_bound = quantile(lc_netbenefit_change, 0.95, na.rm = T)) %>% 
+#   # filter(lc_netbenefit_change>=lower_bound &lc_netbenefit_change<=upper_bound) %>% 
+#   group_by(market_prices) %>%
+#   summarize(min_quantile = quantile(lc_netbenefit_change, 0.05, na.rm = T),
+#             median_value = median(lc_netbenefit_change, na.rm = TRUE),
+#             upp_quantile = quantile(lc_netbenefit_change, 0.95, na.rm = T)) %>% 
+#   pivot_longer(cols=c( "min_quantile", 'median_value',"upp_quantile"), 
+#                names_to = "quantile_levels",values_to = 'change')
+#   
+# ggplot(net_change, aes(x=market_prices, y =change, group = factor(quantile_levels))) +
+#   geom_point(aes(colour = factor(quantile_levels)))+ geom_path(aes(colour =factor( quantile_levels)))+
+#   coord_radial(start = 0.25 * pi, end = 1.75 * pi) +
+#   guides(
+#     theta = guide_axis_theta(angle = 90),
+#     r     = guide_axis(angle = 0) )+
+#   scale_x_discrete(labels =c("low_mp_change" = "Low MP", 
+#                              "med_mp_change" = "Medium MP", 
+#                              "high_mp_change" = "High MP", 
+#                              "low_lp_change" = "Low LP",
+#                              "med_lp_change" = "Medium LP",
+#                              "high_lp_change" = "High LP",
+#                              "low_mp_lp_change" = "Low MP and LP",
+#                              "low_mp_med_lp_change" = "Low MP and Medium LP", 
+#                              "low_mp_high_lp_change" = "Low MP and high LP", 
+#                              "med_mp_low_lp_change" = "Medium MP and low LP",
+#                              "med_mp_lp_change" = "Medium MP and LP",
+#                              "med_mp_high_lp_change" = "Medium MP and high LP", 
+#                              "high_mp_low_lp_change" = "High MP and low LP",
+#                              "high_mp_med_lp_change" = "High MP and Medium LP",
+#                              "high_mp_lp_change" = "High MP and LP" )) +
+#   scale_y_continuous(labels = label_number(suffix = " Million KES")) +
+#   theme_minimal() +
+#   labs(x = NULL, y = NULL) +
+#   scale_colour_manual(name = "",
+#                       labels = c("Median", "5 % quantile","95 % quantile"),
+#                       values = c("deeppink", "limegreen","#1a80bb"))+
+#   theme(legend.position = c(0.4, 0.97))
+
+# ggsave("figures/Fig_4_change_in_decision.png", width = 9, height = 5)
 ```
 
 

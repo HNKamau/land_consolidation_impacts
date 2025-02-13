@@ -1,0 +1,7 @@
+Variable;param;Scen_1;Scen_2;Scen_3;Scen_4;Scen_5;Scen_6;Scen_7;Scen_8;Scen_9;Scen_10;Scen_11;Scen_12;Scen_13;Scen_14;Scen_15;Scen_16
+maize_price_kes_kg;lower;NA;5;86.68;168.34;NA;NA;NA;5;5;5;86.68;86.68;86.68;168.34;168.34;168.34
+maize_price_kes_kg;upper;NA;86.67;168.33;250;NA;NA;NA;86.67;86.67;86.67;168.33;168.33;168.33;250;250;250
+maize_price_kes_kg;distribution;posnorm;unif;unif;unif;NA;NA;NA;unif;unif;unif;unif;unif;unif;unif;unif;unif
+compensation_income_pm_acre;lower;NA;NA;NA;NA;10000;340001;670001;10000;340001;670001;10000;340001;670001;10000;340001;670001
+compensation_income_pm_acre;upper;NA;NA;NA;NA;340000;670000;1000000;340000;670000;1000000;340000;670000;1000000;340000;670000;1000000
+compensation_income_pm_acre;distribution;NA;NA;NA;NA;posnorm;posnorm;posnorm;posnorm;posnorm;posnorm;posnorm;posnorm;posnorm;posnorm;posnorm;posnorm
